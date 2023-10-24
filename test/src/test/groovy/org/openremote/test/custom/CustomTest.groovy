@@ -19,12 +19,11 @@
  */
 package org.openremote.test.custom
 
-import org.openremote.agent.custom.CustomAgent
-import org.openremote.agent.custom.CustomProtocol
+import org.openremote.agent.custom.HomeAssistantAgent
+import org.openremote.agent.custom.HomeAssistantProtocol
 import org.openremote.manager.agent.AgentService
 import org.openremote.manager.asset.AssetStorageService
 import org.openremote.model.Constants
-import org.openremote.model.asset.agent.ConnectionStatus
 import org.openremote.test.ManagerContainerTrait
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
@@ -48,9 +47,9 @@ class CustomTest extends Specification implements ManagerContainerTrait {
         }
 
         when: "a custom agent asset is added"
-        def agent = new CustomAgent("Test Agent")
+        def agent = new HomeAssistantAgent("Test Agent")
             .setRealm(Constants.MASTER_REALM)
-            .setOption(CustomAgent.Option.TWO)
+            .setOption(HomeAssistantAgent.Option.TWO)
 
         and: "the agent is added to the asset service"
         agent = assetStorageService.merge(agent)
@@ -58,7 +57,7 @@ class CustomTest extends Specification implements ManagerContainerTrait {
         then: "the agent should be started"
         conditions.eventually {
             assert agentService.protocolInstanceMap.get(agent.id) != null
-            assert (agentService.protocolInstanceMap.get(agent.id) as CustomProtocol).running
+            assert (agentService.protocolInstanceMap.get(agent.id) as HomeAssistantProtocol).running
         }
     }
 }

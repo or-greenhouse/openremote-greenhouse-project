@@ -43,7 +43,7 @@ import java.util.Optional;
  * </ul>
  */
 @Entity
-public class CustomAgent extends Agent<CustomAgent, CustomProtocol, DefaultAgentLink> {
+public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> {
 
     public enum Option {
         ONE,
@@ -55,27 +55,27 @@ public class CustomAgent extends Agent<CustomAgent, CustomProtocol, DefaultAgent
 
     public static final AttributeDescriptor<Option> OPTION_ATTRIBUTE_DESCRIPTOR = new AttributeDescriptor<>("option", OPTION_VALUE_DESCRIPTOR);
 
-    public static final AgentDescriptor<CustomAgent, CustomProtocol, DefaultAgentLink> DESCRIPTOR = new AgentDescriptor<>(
-        CustomAgent.class, CustomProtocol.class, DefaultAgentLink.class
+    public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> DESCRIPTOR = new AgentDescriptor<>(
+        HomeAssistantAgent.class, HomeAssistantProtocol.class, DefaultAgentLink.class
     );
 
-    protected CustomAgent() {
+    protected HomeAssistantAgent() {
     }
 
-    public CustomAgent(String name) {
+    public HomeAssistantAgent(String name) {
         super(name);
     }
 
     @Override
-    public CustomProtocol getProtocolInstance() {
-        return new CustomProtocol(this);
+    public HomeAssistantProtocol getProtocolInstance() {
+        return new HomeAssistantProtocol(this);
     }
 
     public Optional<Option> getOption() {
         return getAttributes().getValue(OPTION_ATTRIBUTE_DESCRIPTOR);
     }
 
-    public CustomAgent setOption(Option value) {
+    public HomeAssistantAgent setOption(Option value) {
         getAttributes().getOrCreate(OPTION_ATTRIBUTE_DESCRIPTOR).setValue(value);
         return this;
     }

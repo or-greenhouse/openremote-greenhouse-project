@@ -30,7 +30,7 @@ import org.openremote.model.value.ValueDescriptor;
 import java.util.List;
 import java.util.Map;
 
-public class CustomAgentModelProvider implements AssetModelProvider {
+public class HomeAssistantAgentModelProvider implements AssetModelProvider {
 
     @Override
     public boolean useAutoScan() {
