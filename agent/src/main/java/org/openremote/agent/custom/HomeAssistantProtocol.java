@@ -28,6 +28,7 @@ import org.openremote.model.syslog.SyslogCategory;
 
 import java.util.logging.Logger;
 
+import static org.openremote.model.syslog.SyslogCategory.AGENT;
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 
 /**
@@ -37,7 +38,7 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
  */
 public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, DefaultAgentLink> {
 
-    public static final String PROTOCOL_DISPLAY_NAME = "Custom";
+    public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
     protected boolean running;
 
@@ -48,6 +49,20 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     @Override
     protected void doStart(Container container) throws Exception {
         running = true;
+        LOG.info("Starting HomeAssistant protocol for agent " + agent.getName());
+
+        String host = agent.getHost().orElseThrow(() -> {
+            String msg = "Host is not defined so cannot start protocol: " + this;
+            LOG.warning(msg);
+            return new IllegalArgumentException(msg);
+        });
+
+        String accessToken = agent.getAccessToken().orElseThrow(() -> {
+            String msg = "Access Token is not defined so cannot start protocol: " + this;
+            LOG.warning(msg);
+            return new IllegalArgumentException(msg);
+        });
+
     }
 
     @Override
@@ -77,6 +92,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     public String getProtocolInstanceUri() {
-        return "custom://" + agent.getOption();
+        return "custom://" + agent.getHost();
     }
 }

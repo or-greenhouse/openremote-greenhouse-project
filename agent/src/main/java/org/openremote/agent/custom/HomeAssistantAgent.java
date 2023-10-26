@@ -27,6 +27,8 @@ import org.openremote.model.value.AttributeDescriptor;
 import org.openremote.model.value.ValueDescriptor;
 
 import jakarta.persistence.Entity;
+import org.openremote.model.value.ValueType;
+
 import java.util.Optional;
 
 /**
@@ -45,15 +47,7 @@ import java.util.Optional;
 @Entity
 public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> {
 
-    public enum Option {
-        ONE,
-        TWO,
-        THREE
-    };
-
-    public static final ValueDescriptor<Option> OPTION_VALUE_DESCRIPTOR = new ValueDescriptor<>("customAgentOption", Option.class);
-
-    public static final AttributeDescriptor<Option> OPTION_ATTRIBUTE_DESCRIPTOR = new AttributeDescriptor<>("option", OPTION_VALUE_DESCRIPTOR);
+    public static final AttributeDescriptor<String> ACCESS_TOKEN = new AttributeDescriptor<>("AccessToken", ValueType.TEXT);
 
     public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> DESCRIPTOR = new AgentDescriptor<>(
         HomeAssistantAgent.class, HomeAssistantProtocol.class, DefaultAgentLink.class
@@ -71,13 +65,11 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
         return new HomeAssistantProtocol(this);
     }
 
-    public Optional<Option> getOption() {
-        return getAttributes().getValue(OPTION_ATTRIBUTE_DESCRIPTOR);
+
+    // get AccessToken
+    public Optional<String> getAccessToken() {
+        return getAttributes().getValue(ACCESS_TOKEN);
     }
 
-    public HomeAssistantAgent setOption(Option value) {
-        getAttributes().getOrCreate(OPTION_ATTRIBUTE_DESCRIPTOR).setValue(value);
-        return this;
-    }
 }
 
