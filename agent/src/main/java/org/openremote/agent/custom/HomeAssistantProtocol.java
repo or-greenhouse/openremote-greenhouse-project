@@ -51,8 +51,8 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         running = true;
         LOG.info("Starting HomeAssistant protocol for agent " + agent.getName());
 
-        String host = agent.getHost().orElseThrow(() -> {
-            String msg = "Host is not defined so cannot start protocol: " + this;
+        String url = agent.getHomeAssistantUrl().orElseThrow(() -> {
+            String msg = "HomeAssistant URL is not defined so cannot start protocol: " + this;
             LOG.warning(msg);
             return new IllegalArgumentException(msg);
         });
@@ -92,6 +92,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     public String getProtocolInstanceUri() {
-        return "custom://" + agent.getHost();
+        return "custom://" + agent.getHomeAssistantUrl();
     }
 }

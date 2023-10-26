@@ -49,6 +49,8 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
 
     public static final AttributeDescriptor<String> ACCESS_TOKEN = new AttributeDescriptor<>("AccessToken", ValueType.TEXT);
 
+    public static final AttributeDescriptor<String> HOME_ASSISTANT_URL = new AttributeDescriptor<>("HomeAssistantURL", ValueType.HTTP_URL);
+
     public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> DESCRIPTOR = new AgentDescriptor<>(
         HomeAssistantAgent.class, HomeAssistantProtocol.class, DefaultAgentLink.class
     );
@@ -69,6 +71,11 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
     // get AccessToken
     public Optional<String> getAccessToken() {
         return getAttributes().getValue(ACCESS_TOKEN);
+    }
+
+    // get HomeAssistantUrl
+    public Optional<String> getHomeAssistantUrl() {
+        return getAttributes().getValue(HOME_ASSISTANT_URL);
     }
 
 }
