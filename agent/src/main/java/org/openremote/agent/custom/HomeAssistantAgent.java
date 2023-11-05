@@ -67,13 +67,10 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
         return new HomeAssistantProtocol(this);
     }
 
-
-    // get AccessToken
     public Optional<String> getAccessToken() {
         return getAttributes().getValue(ACCESS_TOKEN);
     }
 
-    // get HomeAssistantUrl
     public Optional<String> getHomeAssistantUrl() {
         return getAttributes().getValue(HOME_ASSISTANT_URL);
     }

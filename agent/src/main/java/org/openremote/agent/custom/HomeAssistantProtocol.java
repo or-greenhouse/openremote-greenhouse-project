@@ -19,16 +19,23 @@
  */
 package org.openremote.agent.custom;
 
+import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.model.Container;
+import org.openremote.model.asset.AssetTreeNode;
+import org.openremote.model.asset.agent.ConnectionStatus;
 import org.openremote.model.asset.agent.DefaultAgentLink;
+import org.openremote.model.asset.impl.ThingAsset;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
+import org.openremote.model.protocol.ProtocolAssetDiscovery;
 import org.openremote.model.syslog.SyslogCategory;
 
+import java.util.List;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
-import static org.openremote.model.syslog.SyslogCategory.AGENT;
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 
 /**
@@ -36,10 +43,11 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
  * HomeAssistantAgent} {@link org.openremote.model.asset.Asset} and its' {@link org.openremote.model.asset.agent.Protocol}.
  * This example does nothing useful but is intended to show where protocol classes should be created.
  */
-public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, DefaultAgentLink> {
+public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, DefaultAgentLink> implements ProtocolAssetDiscovery {
 
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
+    protected HomeAssistantClient client;
     protected boolean running;
 
     public HomeAssistantProtocol(HomeAssistantAgent agent) {
@@ -58,12 +66,21 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         });
 
         String accessToken = agent.getAccessToken().orElseThrow(() -> {
-            String msg = "Access Token is not defined so cannot start protocol: " + this;
+            String msg = "Access token is not defined so cannot start protocol: " + this;
             LOG.warning(msg);
             return new IllegalArgumentException(msg);
         });
 
+        client = new HomeAssistantClient(url, accessToken);
+        if (client.isConnectionSuccessful()) {
+            LOG.info("Connection to HomeAssistant successful");
+            setConnectionStatus(ConnectionStatus.CONNECTED);
+        } else {
+            LOG.warning("Connection to HomeAssistant failed");
+            setConnectionStatus(ConnectionStatus.DISCONNECTED);
+        }
     }
+
 
     @Override
     protected void doStop(Container container) throws Exception {
@@ -92,6 +109,34 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     public String getProtocolInstanceUri() {
-        return "custom://" + agent.getHomeAssistantUrl();
+        return agent.getHomeAssistantUrl().orElse("");
+    }
+
+    @Override
+    public Future<Void> startAssetDiscovery(Consumer<AssetTreeNode[]> assetConsumer) {
+
+        ConnectionStatus status = agent.getAgentStatus().orElse(ConnectionStatus.DISCONNECTED);
+        if (status == ConnectionStatus.DISCONNECTED) {
+            LOG.info("Agent not connected so cannot perform discovery");
+            return null;
+        }
+
+        List<HomeAssistantBaseEntity> entityList = client.getEntities().orElse(null);
+
+        if (entityList != null) {
+            setConnectionStatus(ConnectionStatus.CONNECTED);
+            for (HomeAssistantBaseEntity entity : entityList) {
+                LOG.info("Found entity: " + entity.getEntityId());
+                ThingAsset entityAsset = new ThingAsset(entity.getEntityId());
+
+                AssetTreeNode assetTreeNode = new AssetTreeNode(entityAsset);
+                assetConsumer.accept(new AssetTreeNode[]{assetTreeNode});
+            }
+        } else {
+            LOG.warning("No entities found");
+        }
+
+
+        return null;
     }
 }
