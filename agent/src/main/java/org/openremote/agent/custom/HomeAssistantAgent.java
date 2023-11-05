@@ -19,14 +19,12 @@
  */
 package org.openremote.agent.custom;
 
+import jakarta.persistence.Entity;
 import org.openremote.model.asset.Asset;
 import org.openremote.model.asset.agent.Agent;
 import org.openremote.model.asset.agent.AgentDescriptor;
 import org.openremote.model.asset.agent.DefaultAgentLink;
 import org.openremote.model.value.AttributeDescriptor;
-import org.openremote.model.value.ValueDescriptor;
-
-import jakarta.persistence.Entity;
 import org.openremote.model.value.ValueType;
 
 import java.util.Optional;
@@ -52,7 +50,7 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
     public static final AttributeDescriptor<String> HOME_ASSISTANT_URL = new AttributeDescriptor<>("HomeAssistantURL", ValueType.HTTP_URL);
 
     public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> DESCRIPTOR = new AgentDescriptor<>(
-        HomeAssistantAgent.class, HomeAssistantProtocol.class, DefaultAgentLink.class
+            HomeAssistantAgent.class, HomeAssistantProtocol.class, DefaultAgentLink.class
     );
 
     protected HomeAssistantAgent() {
