@@ -21,7 +21,9 @@ package org.openremote.agent.custom;
 
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.protocol.AbstractProtocol;
+import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.model.Container;
+import org.openremote.model.asset.Asset;
 import org.openremote.model.asset.AssetTreeNode;
 import org.openremote.model.asset.agent.ConnectionStatus;
 import org.openremote.model.asset.agent.DefaultAgentLink;
@@ -29,6 +31,7 @@ import org.openremote.model.asset.impl.ThingAsset;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.protocol.ProtocolAssetDiscovery;
+import org.openremote.model.query.AssetQuery;
 import org.openremote.model.syslog.SyslogCategory;
 
 import java.util.List;
@@ -47,8 +50,10 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
+
     protected HomeAssistantClient client;
     protected boolean running;
+
 
     public HomeAssistantProtocol(HomeAssistantAgent agent) {
         super(agent);
@@ -75,10 +80,14 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         if (client.isConnectionSuccessful()) {
             LOG.info("Connection to HomeAssistant successful");
             setConnectionStatus(ConnectionStatus.CONNECTED);
+            assetService = container.getService(ProtocolAssetService.class);
+            executorService = container.getExecutorService();
         } else {
             LOG.warning("Connection to HomeAssistant failed");
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
         }
+
+
     }
 
 
@@ -112,9 +121,10 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         return agent.getHomeAssistantUrl().orElse("");
     }
 
+
+    // TODO: There's a bug with AssetDiscovery and large numbers of assets, the front-end gets stuck on loading - refresh fixes it
     @Override
     public Future<Void> startAssetDiscovery(Consumer<AssetTreeNode[]> assetConsumer) {
-
         ConnectionStatus status = agent.getAgentStatus().orElse(ConnectionStatus.DISCONNECTED);
         if (status == ConnectionStatus.DISCONNECTED) {
             LOG.info("Agent not connected so cannot perform discovery");
@@ -125,18 +135,24 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
         if (entityList != null) {
             setConnectionStatus(ConnectionStatus.CONNECTED);
-            for (HomeAssistantBaseEntity entity : entityList) {
-                LOG.info("Found entity: " + entity.getEntityId());
-                ThingAsset entityAsset = new ThingAsset(entity.getEntityId());
+            List<String> currentAssets = assetService.findAssets(agent.getId(), new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
 
-                AssetTreeNode assetTreeNode = new AssetTreeNode(entityAsset);
-                assetConsumer.accept(new AssetTreeNode[]{assetTreeNode});
-            }
-        } else {
-            LOG.warning("No entities found");
+            return executorService.submit(() -> {
+                for (HomeAssistantBaseEntity entity : entityList) {
+                    LOG.info("Found entity: " + entity.getEntityId());
+                    ThingAsset entityAsset = new ThingAsset(entity.getEntityId());
+
+                    if (currentAssets.contains(entity.getEntityId())) {
+                        LOG.info("Entity already exists: " + entity.getEntityId());
+                        continue;
+                    }
+
+                    AssetTreeNode assetTreeNode = new AssetTreeNode(entityAsset);
+                    assetConsumer.accept(new AssetTreeNode[]{assetTreeNode});
+                }
+
+            }, null);
         }
-
-
         return null;
     }
 }
