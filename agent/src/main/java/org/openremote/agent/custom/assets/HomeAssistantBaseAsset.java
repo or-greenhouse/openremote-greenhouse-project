@@ -41,6 +41,26 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
         return this;
     }
 
+    public HomeAssistantBaseAsset setHassTextAttribute(String name, String value) {
+        AttributeDescriptor<String> hassAttribute = new AttributeDescriptor<>(name, ValueType.TEXT);
+        getAttributes().getOrCreate(hassAttribute).setValue(value);
+        return this;
+    }
+
+    public HomeAssistantBaseAsset setHassTextAttributes(Map<String, Object> hassAttributes) {
+        List<AttributeDescriptor<String>> attributes = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : hassAttributes.entrySet()) {
+            AttributeDescriptor<String> hassAttribute = new AttributeDescriptor<>(entry.getKey(), ValueType.TEXT);
+
+            if (entry.getValue() == null) {
+                getAttributes().getOrCreate(hassAttribute).setValue("");
+            } else getAttributes().getOrCreate(hassAttribute).setValue(entry.getValue().toString());
+
+            attributes.add(hassAttribute);
+        }
+        return this;
+    }
+
     public HomeAssistantBaseAsset setIcon(String value) {
         descriptor = new AssetDescriptor<>(value, null, HomeAssistantBaseAsset.class);
         return this;

@@ -161,6 +161,8 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
                                     .setAssetType(entity.getEntityId())
                                     .setState(entity.getState());
 
+                    Map<String, Object> hassAttributes = entity.getAttributes();
+                    entityAsset.setHassTextAttributes(hassAttributes);
 //
 
                     if (currentAssets.contains(entity.getEntityId())) {
