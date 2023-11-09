@@ -125,11 +125,11 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     // TODO: There's a bug with AssetDiscovery and large numbers of assets, the front-end gets stuck on loading - refresh fixes it
     @Override
     public Future<Void> startAssetDiscovery(Consumer<AssetTreeNode[]> assetConsumer) {
-        ConnectionStatus status = agent.getAgentStatus().orElse(ConnectionStatus.DISCONNECTED);
-        if (status == ConnectionStatus.DISCONNECTED) {
-            LOG.info("Agent not connected so cannot perform discovery");
-            return null;
-        }
+//        ConnectionStatus status = agent.getAgentStatus().orElse(ConnectionStatus.DISCONNECTED);
+//        if (status == ConnectionStatus.DISCONNECTED) {
+//            LOG.info("Agent not connected so cannot perform discovery");
+//            return null;
+//        }
 
         List<HomeAssistantBaseEntity> entityList = client.getEntities().orElse(null);
 

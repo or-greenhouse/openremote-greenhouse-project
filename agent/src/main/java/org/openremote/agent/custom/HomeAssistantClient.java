@@ -5,11 +5,18 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.model.syslog.SyslogCategory;
+import org.xnio.Option;
+import org.xnio.Options;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -29,7 +36,8 @@ public class HomeAssistantClient {
     }
 
     public Optional<List<HomeAssistantBaseEntity>> getEntities() {
-        Optional<String> response = sendGetRequest();
+        // Optional<String> response = sendGetRequest();
+        Optional<String> response = readJsonFile(); // For development purposes
         if (response.isPresent()) {
             ObjectMapper mapper = new ObjectMapper();
             try {
@@ -46,8 +54,9 @@ public class HomeAssistantClient {
 
 
     public boolean isConnectionSuccessful() {
-        Optional<String> response = sendGetRequest();
-        return response.isPresent();
+        return true;
+//        Optional<String> response = sendGetRequest();
+//        return response.isPresent();
     }
 
     private Optional<String> sendGetRequest() {
@@ -68,4 +77,21 @@ public class HomeAssistantClient {
         }
         return Optional.empty();
     }
+
+    private Optional<String> readJsonFile() {
+        InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream("hass.json");
+        InputStreamReader streamReader = new InputStreamReader(input, StandardCharsets.UTF_8);
+        BufferedReader reader = new BufferedReader(streamReader);
+        StringBuilder output = new StringBuilder();
+        try {
+            for (String line; (line = reader.readLine()) != null; ) {
+                output.append(line);
+            }
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+        return Optional.of(output.toString());
+    }
+
+
 }
