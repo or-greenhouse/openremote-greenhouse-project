@@ -19,6 +19,8 @@
  */
 package org.openremote.agent.custom;
 
+import org.openremote.agent.custom.assets.HomeAssistantBaseAsset;
+import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.agent.protocol.ProtocolAssetService;
@@ -34,7 +36,9 @@ import org.openremote.model.protocol.ProtocolAssetDiscovery;
 import org.openremote.model.query.AssetQuery;
 import org.openremote.model.syslog.SyslogCategory;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -48,6 +52,7 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
  */
 public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, DefaultAgentLink> implements ProtocolAssetDiscovery {
 
+    private List<String> array;
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
 
@@ -86,6 +91,12 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             LOG.warning("Connection to HomeAssistant failed");
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
         }
+
+        array = new ArrayList<>();
+        array.add("binary_sensor");
+        array.add("button");
+        array.add("sensor");
+        array.add("light");
 
 
     }
@@ -140,7 +151,17 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             return executorService.submit(() -> {
                 for (HomeAssistantBaseEntity entity : entityList) {
                     LOG.info("Found entity: " + entity.getEntityId());
-                    ThingAsset entityAsset = new ThingAsset(entity.getEntityId());
+                    String assetType = entity.getEntityId().split("\\.")[0];
+
+
+                    if (!array.contains(assetType)) continue;
+
+                    HomeAssistantBaseAsset entityAsset;
+                            entityAsset = new HomeAssistantLightAsset(entity.getEntityId())
+                                    .setAssetType(entity.getEntityId())
+                                    .setState(entity.getState());
+
+//
 
                     if (currentAssets.contains(entity.getEntityId())) {
                         LOG.info("Entity already exists: " + entity.getEntityId());
