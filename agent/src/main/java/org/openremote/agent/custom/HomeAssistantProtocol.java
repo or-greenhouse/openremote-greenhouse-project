@@ -157,9 +157,17 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
                     if (!array.contains(assetType)) continue;
 
                     HomeAssistantBaseAsset entityAsset;
+                    switch (assetType) {
+                        case "light" :
                             entityAsset = new HomeAssistantLightAsset(entity.getEntityId())
                                     .setAssetType(entity.getEntityId())
                                     .setState(entity.getState());
+                            break;
+                        default :
+                            entityAsset = new HomeAssistantBaseAsset(entity.getEntityId())
+                                    .setAssetType(entity.getEntityId())
+                                    .setState(entity.getState());
+                    }
 
                     Map<String, Object> hassAttributes = entity.getAttributes();
                     entityAsset.setHassTextAttributes(hassAttributes);
