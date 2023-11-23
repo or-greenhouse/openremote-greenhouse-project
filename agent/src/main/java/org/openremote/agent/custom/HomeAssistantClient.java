@@ -43,10 +43,32 @@ public class HomeAssistantClient {
         return Optional.empty();
     }
 
+    public void setEntityState(String entityId, String state) {
+        String json = "{\"state\": \"" + state + "\"}";
+        sendPostRequest("/api/states/" + entityId, json);
+    }
+
 
     public boolean isConnectionSuccessful() {
         Optional<String> response = sendGetRequest("/api");
         return response.isPresent();
+    }
+
+    private void sendPostRequest(String path, String json) {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(HomeAssistantUrl + path))
+                .header("Authorization", "Bearer " + Token)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        try {
+            LOG.info("Sending request to: " + request.uri());
+            client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        } catch (Exception e) {
+            LOG.warning("Error sending request: " + e.getMessage());
+        }
     }
 
     private Optional<String> sendGetRequest(String path) {
