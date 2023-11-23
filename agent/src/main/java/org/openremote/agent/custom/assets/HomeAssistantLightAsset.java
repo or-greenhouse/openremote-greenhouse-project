@@ -12,6 +12,7 @@ public class HomeAssistantLightAsset extends HomeAssistantBaseAsset {
     protected HomeAssistantLightAsset() {
 
     }
+
     public HomeAssistantLightAsset(String name) {
         super(name);
     }

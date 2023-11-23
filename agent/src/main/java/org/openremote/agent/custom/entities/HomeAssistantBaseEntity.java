@@ -1,9 +1,8 @@
 package org.openremote.agent.custom.entities;
 
-import com.fasterxml.jackson.annotation.*;
-import org.openremote.model.asset.Asset;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Dictionary;
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -13,7 +12,7 @@ public class HomeAssistantBaseEntity {
     private String state;
 
     @JsonProperty("attributes")
-    private Map<String, Object> hassAttributes;
+    private Map<String, Object> homeAssistantAttributes;
 
     public String getEntityId() {
         return entityId;
@@ -32,6 +31,6 @@ public class HomeAssistantBaseEntity {
     }
 
     public Map<String, Object> getAttributes() {
-        return hassAttributes;
+        return homeAssistantAttributes;
     }
 }

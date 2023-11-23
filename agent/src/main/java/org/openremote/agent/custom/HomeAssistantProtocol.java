@@ -29,7 +29,6 @@ import org.openremote.model.asset.Asset;
 import org.openremote.model.asset.AssetTreeNode;
 import org.openremote.model.asset.agent.ConnectionStatus;
 import org.openremote.model.asset.agent.DefaultAgentLink;
-import org.openremote.model.asset.impl.ThingAsset;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.protocol.ProtocolAssetDiscovery;
@@ -52,10 +51,9 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
  */
 public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, DefaultAgentLink> implements ProtocolAssetDiscovery {
 
-    private List<String> array;
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
-
+    private final List<String> SUPPORTED_ENTITY_TYPES = new ArrayList<>(List.of("light", "switch", "binary_sensor", "sensor"));
     protected HomeAssistantClient client;
     protected boolean running;
 
@@ -67,7 +65,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     @Override
     protected void doStart(Container container) throws Exception {
         running = true;
-        LOG.info("Starting HomeAssistant protocol for agent " + agent.getName());
 
         String url = agent.getHomeAssistantUrl().orElseThrow(() -> {
             String msg = "HomeAssistant URL is not defined so cannot start protocol: " + this;
@@ -92,12 +89,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
         }
 
-        array = new ArrayList<>();
-        array.add("binary_sensor");
-        array.add("button");
-        array.add("sensor");
-        array.add("light");
-
 
     }
 
@@ -119,7 +110,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     protected void doLinkedAttributeWrite(Attribute<?> attribute, DefaultAgentLink agentLink, AttributeEvent event, Object processedValue) {
-
     }
 
     @Override
@@ -133,45 +123,39 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
 
-    // TODO: There's a bug with AssetDiscovery and large numbers of assets, the front-end gets stuck on loading - refresh fixes it
     @Override
     public Future<Void> startAssetDiscovery(Consumer<AssetTreeNode[]> assetConsumer) {
-//        ConnectionStatus status = agent.getAgentStatus().orElse(ConnectionStatus.DISCONNECTED);
-//        if (status == ConnectionStatus.DISCONNECTED) {
-//            LOG.info("Agent not connected so cannot perform discovery");
-//            return null;
-//        }
+        ConnectionStatus status = agent.getAgentStatus().orElse(ConnectionStatus.DISCONNECTED);
+        if (status == ConnectionStatus.DISCONNECTED) {
+            LOG.info("Agent not connected so cannot perform discovery");
+            return null;
+        }
 
-        List<HomeAssistantBaseEntity> entityList = client.getEntities().orElse(null);
+        List<HomeAssistantBaseEntity> homeAssistantBaseEntities = client.getEntities().orElse(null);
 
-        if (entityList != null) {
+        if (homeAssistantBaseEntities != null) {
             setConnectionStatus(ConnectionStatus.CONNECTED);
             List<String> currentAssets = assetService.findAssets(agent.getId(), new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
 
             return executorService.submit(() -> {
-                for (HomeAssistantBaseEntity entity : entityList) {
+                for (HomeAssistantBaseEntity entity : homeAssistantBaseEntities) {
                     LOG.info("Found entity: " + entity.getEntityId());
                     String assetType = entity.getEntityId().split("\\.")[0];
 
 
-                    if (!array.contains(assetType)) continue;
+                    if (!SUPPORTED_ENTITY_TYPES.contains(assetType)) continue;
 
-                    HomeAssistantBaseAsset entityAsset;
-                    switch (assetType) {
-                        case "light" :
-                            entityAsset = new HomeAssistantLightAsset(entity.getEntityId())
-                                    .setAssetType(entity.getEntityId())
-                                    .setState(entity.getState());
-                            break;
-                        default :
-                            entityAsset = new HomeAssistantBaseAsset(entity.getEntityId())
-                                    .setAssetType(entity.getEntityId())
-                                    .setState(entity.getState());
-                    }
+                    HomeAssistantBaseAsset entityAsset = switch (assetType) {
+                        case "light" -> new HomeAssistantLightAsset(entity.getEntityId())
+                                .setAssetType(entity.getEntityId())
+                                .setState(entity.getState());
+                        default -> new HomeAssistantBaseAsset(entity.getEntityId())
+                                .setAssetType(entity.getEntityId())
+                                .setState(entity.getState());
+                    };
 
-                    Map<String, Object> hassAttributes = entity.getAttributes();
-                    entityAsset.setHassTextAttributes(hassAttributes);
-//
+                    Map<String, Object> homeAssistantAttributes = entity.getAttributes();
+                    entityAsset.setHomeAssistantTextAttributes(homeAssistantAttributes);
 
                     if (currentAssets.contains(entity.getEntityId())) {
                         LOG.info("Entity already exists: " + entity.getEntityId());
