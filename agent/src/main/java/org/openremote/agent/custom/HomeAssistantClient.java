@@ -43,11 +43,6 @@ public class HomeAssistantClient {
         return Optional.empty();
     }
 
-    public void setEntityState(String entityId, String state) {
-        String json = "{\"state\": \"" + state + "\"}";
-        sendPostRequest("/api/states/" + entityId, json);
-    }
-
 
     public boolean isConnectionSuccessful() {
         Optional<String> response = sendGetRequest("/api");
