@@ -51,10 +51,10 @@ public class HomeAssistantClient {
 
     public void setEntityState(String domain, String service, String entity_id, String setting) {
         if (setting.isBlank()) {
-            sendPostRequest("/api/services/" + domain + "/" + service, "'{\"entity_id\": \"" + entity_id + "\"}'");
+            sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
             return;
         }
-        sendPostRequest("/api/services/" + domain + "/" + service, "'{\"entity_id\": \"" + entity_id + "\", " + setting + "}'");
+        sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\", " + setting + "}");
     }
 
     public void sendPostRequest(String path, String json) {
@@ -62,13 +62,12 @@ public class HomeAssistantClient {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(HomeAssistantUrl + path))
                 .header("Authorization", "Bearer " + Token)
+                .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
         try {
-            LOG.info("Sending request to: " + request.uri());
             client.send(request, HttpResponse.BodyHandlers.ofString());
-
         } catch (Exception e) {
             LOG.warning("Error sending request: " + e.getMessage());
         }
