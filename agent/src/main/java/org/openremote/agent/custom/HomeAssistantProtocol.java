@@ -49,7 +49,7 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
  * HomeAssistantAgent} {@link org.openremote.model.asset.Asset} and its' {@link org.openremote.model.asset.agent.Protocol}.
  * This example does nothing useful but is intended to show where protocol classes should be created.
  */
-public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, DefaultAgentLink> implements ProtocolAssetDiscovery {
+public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, HomeAssistantAgentLink> implements ProtocolAssetDiscovery {
 
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
@@ -99,19 +99,20 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
     @Override
-    protected void doLinkAttribute(String assetId, Attribute<?> attribute, DefaultAgentLink agentLink) throws RuntimeException {
+    protected void doLinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) throws RuntimeException {
 
     }
 
     @Override
-    protected void doUnlinkAttribute(String assetId, Attribute<?> attribute, DefaultAgentLink agentLink) {
+    protected void doUnlinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) {
 
     }
 
     @Override
-    protected void doLinkedAttributeWrite(Attribute<?> attribute, DefaultAgentLink agentLink, AttributeEvent event, Object processedValue) {
+    protected void doLinkedAttributeWrite(Attribute<?> attribute, HomeAssistantAgentLink agentLink, AttributeEvent event, Object processedValue) {
 
         LOG.info("Writing attribute: " + attribute.getName() + " to agent link: " + agentLink.getId() + " with value: " + processedValue);
+        client.setEntityState(agentLink.domainId, "turn_on" ,agentLink.entityId, "");
     }
 
     @Override
@@ -157,7 +158,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
                     };
 
                     Map<String, Object> homeAssistantAttributes = entity.getAttributes();
-                    var agentLink = new DefaultAgentLink(agent.getId());
+                    var agentLink = new HomeAssistantAgentLink(agent.getId(), assetType, entity.getEntityId());
                     entityAsset.setHomeAssistantTextAttributes(homeAssistantAttributes, agentLink);
 
                     if (currentAssets.contains(entity.getEntityId())) {

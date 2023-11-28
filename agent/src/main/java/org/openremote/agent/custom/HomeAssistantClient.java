@@ -49,6 +49,14 @@ public class HomeAssistantClient {
         return response.isPresent();
     }
 
+    public void setEntityState(String domain, String service, String entity_id, String setting) {
+        if (setting.isBlank()) {
+            sendPostRequest("/api/services/" + domain + "/" + service, "'{\"entity_id\": \"" + entity_id + "\"}'");
+            return;
+        }
+        sendPostRequest("/api/services/" + domain + "/" + service, "'{\"entity_id\": \"" + entity_id + "\", " + setting + "}'");
+    }
+
     public void sendPostRequest(String path, String json) {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()

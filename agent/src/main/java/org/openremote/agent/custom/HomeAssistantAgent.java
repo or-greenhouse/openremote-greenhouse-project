@@ -43,14 +43,14 @@ import java.util.Optional;
  * </ul>
  */
 @Entity
-public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> {
+public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> {
 
     public static final AttributeDescriptor<String> ACCESS_TOKEN = new AttributeDescriptor<>("AccessToken", ValueType.TEXT);
 
     public static final AttributeDescriptor<String> HOME_ASSISTANT_URL = new AttributeDescriptor<>("HomeAssistantURL", ValueType.HTTP_URL);
 
-    public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, DefaultAgentLink> DESCRIPTOR = new AgentDescriptor<>(
-            HomeAssistantAgent.class, HomeAssistantProtocol.class, DefaultAgentLink.class
+    public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> DESCRIPTOR = new AgentDescriptor<>(
+            HomeAssistantAgent.class, HomeAssistantProtocol.class, HomeAssistantAgentLink.class
     );
 
     protected HomeAssistantAgent() {
