@@ -49,7 +49,7 @@ public class HomeAssistantClient {
         return response.isPresent();
     }
 
-    private void sendPostRequest(String path, String json) {
+    public void sendPostRequest(String path, String json) {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(HomeAssistantUrl + path))

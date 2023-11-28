@@ -3,10 +3,14 @@ package org.openremote.agent.custom.assets;
 import jakarta.persistence.Entity;
 import org.openremote.model.asset.Asset;
 import org.openremote.model.asset.AssetDescriptor;
+import org.openremote.model.asset.agent.AgentLink;
+import org.openremote.model.attribute.MetaItem;
 import org.openremote.model.value.AttributeDescriptor;
 import org.openremote.model.value.ValueType;
 
 import java.util.Map;
+
+import static org.openremote.model.value.MetaItemType.AGENT_LINK;
 
 @Entity
 public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
@@ -39,17 +43,55 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
         return this;
     }
 
-    public HomeAssistantBaseAsset setHomeAssistantTextAttributes(Map<String, Object> homeAssistantAttributes) {
+
+    public HomeAssistantBaseAsset setHomeAssistantTextAttributes(Map<String, Object> homeAssistantAttributes, AgentLink agentLink) {
         for (Map.Entry<String, Object> entry : homeAssistantAttributes.entrySet()) {
             AttributeDescriptor<String> homeAssistantAttribute = new AttributeDescriptor<>(entry.getKey(), ValueType.TEXT);
+
+
             if (entry.getValue() == null) {
-                getAttributes().getOrCreate(homeAssistantAttribute).setValue("");
+                getAttributes().getOrCreate(homeAssistantAttribute)
+                        .addOrReplaceMeta(new MetaItem<>(AGENT_LINK, agentLink))
+                        .setValue("");
             } else {
-                getAttributes().getOrCreate(homeAssistantAttribute).setValue(entry.getValue().toString());
+                getAttributes().getOrCreate(homeAssistantAttribute)
+                        .addOrReplaceMeta(new MetaItem<>(AGENT_LINK, agentLink))
+                        .setValue(entry.getValue().toString());
             }
         }
         return this;
     }
+
+//    public HomeAssistantBaseAsset setHomeAssistantTextAttributes(Map<String, Object> homeAssistantAttributes, AgentLink agentLink) {
+//        for (Map.Entry<String, Object> entry : homeAssistantAttributes.entrySet()) {
+//            AttributeDescriptor<String> homeAssistantAttribute = new AttributeDescriptor<>(entry.getKey(), ValueType.TEXT);
+//            Attribute<String> attr = getAttributes().getOrCreate(homeAssistantAttribute).addMeta(
+//                    new MetaItem<>(AGENT_LINK, agentLink)
+//            );
+//
+//                        lightAsset.getAttributes().get(BRIGHTNESS).ifPresent(attribute -> attribute.addOrReplaceMeta(
+//                new MetaItem<>(AGENT_LINK, new DefaultAgentLink(agent.getId()))
+//            ));
+//
+////
+////        Attribute<?> attr = asset.getAttributes().get(attrName).orElse(new Attribute<>(attrName, type).addMeta(
+////                        new MetaItem<>(MetaItemType.LABEL, name),
+////                        new MetaItem<>(AGENT_LINK, agentLink)
+////        ));
+////
+////        asset.getAttributes().addOrReplace(attr);
+//
+//
+//            if (entry.getValue() == null) {
+//                     attr.setValue("");
+//
+//            } else {
+//                attr.setValue(entry.getValue().toString());
+//            }
+//
+//        }
+//        return this;
+//    }
 
     public HomeAssistantBaseAsset setIcon(String value) {
         ICON = new AssetDescriptor<>(value, null, HomeAssistantBaseAsset.class);

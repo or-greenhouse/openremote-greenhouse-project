@@ -110,6 +110,8 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     protected void doLinkedAttributeWrite(Attribute<?> attribute, DefaultAgentLink agentLink, AttributeEvent event, Object processedValue) {
+
+        LOG.info("Writing attribute: " + attribute.getName() + " to agent link: " + agentLink.getId() + " with value: " + processedValue);
     }
 
     @Override
@@ -155,7 +157,8 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
                     };
 
                     Map<String, Object> homeAssistantAttributes = entity.getAttributes();
-                    entityAsset.setHomeAssistantTextAttributes(homeAssistantAttributes);
+                    var agentLink = new DefaultAgentLink(agent.getId());
+                    entityAsset.setHomeAssistantTextAttributes(homeAssistantAttributes, agentLink);
 
                     if (currentAssets.contains(entity.getEntityId())) {
                         LOG.info("Entity already exists: " + entity.getEntityId());
