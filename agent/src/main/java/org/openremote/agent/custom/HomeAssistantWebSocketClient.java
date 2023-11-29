@@ -22,8 +22,7 @@ public class HomeAssistantWebSocketClient {
 
     public HomeAssistantWebSocketClient(HomeAssistantProtocol protocol) {
         var homeAssistantUrl = protocol.getAgent().getHomeAssistantUrl().orElseThrow();
-        //this.webSocketEndpoint = (homeAssistantUrl + "/api/websocket").replace("http", "ws");
-        this.webSocketEndpoint = "ws://192.168.178.22:8123/api/websocket";
+        this.webSocketEndpoint = (homeAssistantUrl + "/api/websocket").replace("http", "ws");
         this.protocol = protocol;
 
     }
