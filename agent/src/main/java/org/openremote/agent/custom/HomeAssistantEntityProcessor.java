@@ -8,11 +8,14 @@ import org.openremote.agent.custom.helpers.HomeAssistantJsonHelper;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.container.util.UniqueIdentifierGenerator;
 import org.openremote.model.asset.Asset;
+import org.openremote.model.attribute.MetaItem;
 import org.openremote.model.query.AssetQuery;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import static org.openremote.model.value.MetaItemType.AGENT_LINK;
 
 public class HomeAssistantEntityProcessor {
 
@@ -96,6 +99,12 @@ public class HomeAssistantEntityProcessor {
 
             if (asset == null)
                 continue;
+
+            // add agent links to each attribute of the asset
+            asset.getAttributes().forEach(attribute -> {
+                var agentLink = new HomeAssistantAgentLink(agentId, entityType, entity.getEntityId());
+                attribute.addOrReplaceMeta(new MetaItem<>(AGENT_LINK, agentLink));
+            });
 
             asset.setId(UniqueIdentifierGenerator.generateId());
             assets.add(asset);

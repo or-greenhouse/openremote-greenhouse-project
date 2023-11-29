@@ -27,6 +27,7 @@ import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.syslog.SyslogCategory;
 
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
@@ -129,9 +130,18 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     protected void doLinkedAttributeWrite(Attribute<?> attribute, HomeAssistantAgentLink agentLink, AttributeEvent event, Object processedValue) {
+        LOG.info("Writing attribute: " + attribute.getName() + " to asset: " + event.getAssetId() + " with value: " + processedValue);
+        String value = processedValue.toString();
+        if (value.equals("on") || value.equals("true"))
+        {
+            client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, "");
+        }
+        else if (value.equals("off") || value.equals("false"))
+        {
+            client.setEntityState(agentLink.domainId, "turn_off", agentLink.entityId, "");
+        }
 
-        LOG.info("Writing attribute: " + attribute.getName() + " to agent link: " + agentLink.getId() + " with value: " + processedValue);
-        client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, "");
+
     }
 
     @Override

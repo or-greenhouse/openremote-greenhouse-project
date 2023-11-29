@@ -50,6 +50,7 @@ public class HomeAssistantClient {
     }
 
     public void setEntityState(String domain, String service, String entity_id, String setting) {
+        LOG.info("CALLING entity service: " + service + " for entity: " + entity_id + " with setting: " + setting);
         if (setting.isBlank()) {
             sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
             return;

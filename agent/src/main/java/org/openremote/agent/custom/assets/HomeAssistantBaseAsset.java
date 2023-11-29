@@ -37,21 +37,4 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
         getAttributes().getOrCreate(STATE).setValue(value);
         return this;
     }
-
-    public void setHomeAssistantTextAttributes(Map<String, Object> homeAssistantAttributes, AgentLink<HomeAssistantAgentLink> agentLink) {
-        for (Map.Entry<String, Object> entry : homeAssistantAttributes.entrySet()) {
-            AttributeDescriptor<String> homeAssistantAttribute = new AttributeDescriptor<>(entry.getKey(), ValueType.TEXT);
-            var metaItem = new MetaItem<>(AGENT_LINK, agentLink);
-
-            if (entry.getValue() == null) {
-                getAttributes().getOrCreate(homeAssistantAttribute)
-                        .addOrReplaceMeta(metaItem)
-                        .setValue("");
-            } else {
-                getAttributes().getOrCreate(homeAssistantAttribute)
-                        .addOrReplaceMeta(metaItem)
-                        .setValue(entry.getValue().toString());
-            }
-        }
-    }
 }
