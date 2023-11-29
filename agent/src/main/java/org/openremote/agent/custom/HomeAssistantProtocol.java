@@ -115,7 +115,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     protected void doStop(Container container) throws Exception {
-
+        running = false;
     }
 
     @Override

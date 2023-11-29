@@ -67,6 +67,8 @@ public class HomeAssistantEntityProcessor {
                 continue; // skip unsupported entity types and already discovered assets
             }
             Asset<?> asset;
+
+            //TODO: Refactor to make use of the factory design pattern
             switch (entityType) {
                 case ENTITY_TYPE_LIGHT:
                     asset = new HomeAssistantLightAsset(entity.getEntityId())
