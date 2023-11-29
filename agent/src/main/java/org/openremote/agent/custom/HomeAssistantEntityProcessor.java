@@ -4,11 +4,9 @@ import org.openremote.agent.custom.assets.HomeAssistantBaseAsset;
 import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.custom.entities.HomeAssistantEntityStateEvent;
-import org.openremote.agent.custom.helpers.HomeAssistantJsonHelper;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.container.util.UniqueIdentifierGenerator;
 import org.openremote.model.asset.Asset;
-import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.attribute.MetaItem;
 import org.openremote.model.query.AssetQuery;
 
@@ -36,7 +34,7 @@ public class HomeAssistantEntityProcessor {
 
     public void processEntityStateEvent(HomeAssistantEntityStateEvent event) {
         var entityId = event.getData().getEntityId();
-        var entityTypeId = HomeAssistantJsonHelper.getTypeFromEntityId(entityId);
+        var entityTypeId = getTypeFromEntityId(entityId);
 
         if (!SUPPORTED_ENTITY_TYPES.contains(entityTypeId)) {
             return; // skip unsupported entity types
@@ -64,7 +62,7 @@ public class HomeAssistantEntityProcessor {
 
         for (HomeAssistantBaseEntity entity : entities) {
             String entityId = entity.getEntityId();
-            String entityType = HomeAssistantJsonHelper.getTypeFromEntityId(entityId);
+            String entityType = getTypeFromEntityId(entityId);
             if (!SUPPORTED_ENTITY_TYPES.contains(entityType) || currentAssets.contains(entityId)) {
                 continue; // skip unsupported entity types and already discovered assets
             }
@@ -123,7 +121,8 @@ public class HomeAssistantEntityProcessor {
 
         lightAssetStateAttribute.get().setValue(event.getData().getNewBaseEntity().getState());
         lightAssetOnOffAttribute.get().setValue(getBooleanStateFromEntityState(event.getData().getNewBaseEntity().getState()));
-        lightAssetBrightnessAttribute.get().setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
+        lightAssetBrightnessAttribute.get()
+                .setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
 
         asset.addOrReplaceAttributes(lightAssetStateAttribute.get());
         asset.addOrReplaceAttributes(lightAssetOnOffAttribute.get());
@@ -152,6 +151,11 @@ public class HomeAssistantEntityProcessor {
                 .filter(asset -> asset.getName().equals(homeAssistantEntityId))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private String getTypeFromEntityId(String entityId) {
+        String[] parts = entityId.split("\\.");
+        return parts[0];
     }
 
 }
