@@ -16,23 +16,22 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 public class HomeAssistantWebSocketClient {
 
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantClient.class);
-    private final String WebSocketUrl;
+    private final String webSocketUrl;
     private final HomeAssistantProtocol protocol;
     private Session session;
 
     public HomeAssistantWebSocketClient(HomeAssistantProtocol protocol) {
-//        var webSocketUrl = homeAssistantUrl + "/api/websocket";
-//        webSocketUrl = webSocketUrl.replace("https", "ws");
+        var webSocketUrl = homeAssistantUrl + "/api/websocket";
+        webSocketUrl = webSocketUrl.replace("http", "ws");
 
-        this.WebSocketUrl = "ws://192.168.178.22:8123/api/websocket";
         this.protocol = protocol;
     }
 
     public void connect() {
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         try {
-            LOG.info("Connecting to Home Assistant WebSocket Endpoint: " + WebSocketUrl);
-            container.connectToServer(this, URI.create(WebSocketUrl));
+            LOG.info("Connecting to Home Assistant WebSocket Endpoint: " + webSocketUrl);
+            container.connectToServer(this, URI.create(webSocketUrl));
         } catch (Exception e) {
             LOG.warning("Error establishing connection to Home Assistant WebSocket Endpoint: " + e.getMessage());
             throw new RuntimeException(e);
