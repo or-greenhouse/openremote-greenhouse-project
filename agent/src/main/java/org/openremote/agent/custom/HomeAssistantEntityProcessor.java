@@ -8,6 +8,7 @@ import org.openremote.agent.custom.helpers.HomeAssistantJsonHelper;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.container.util.UniqueIdentifierGenerator;
 import org.openremote.model.asset.Asset;
+import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.attribute.MetaItem;
 import org.openremote.model.query.AssetQuery;
 
@@ -32,7 +33,6 @@ public class HomeAssistantEntityProcessor {
         this.protocolAssetService = protocolAssetService;
         this.agentId = agentId;
     }
-
 
     public void processEntityStateEvent(HomeAssistantEntityStateEvent event) {
         var entityId = event.getData().getEntityId();
@@ -125,10 +125,10 @@ public class HomeAssistantEntityProcessor {
         lightAssetOnOffAttribute.get().setValue(getBooleanStateFromEntityState(event.getData().getNewBaseEntity().getState()));
         lightAssetBrightnessAttribute.get().setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
 
-
         asset.addOrReplaceAttributes(lightAssetStateAttribute.get());
         asset.addOrReplaceAttributes(lightAssetOnOffAttribute.get());
         asset.addOrReplaceAttributes(lightAssetBrightnessAttribute.get());
+
         this.protocolAssetService.mergeAsset(asset);
     }
 

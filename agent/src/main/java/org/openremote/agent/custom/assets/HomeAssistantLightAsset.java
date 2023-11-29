@@ -10,7 +10,7 @@ public class HomeAssistantLightAsset extends HomeAssistantBaseAsset {
 
     public static final AssetDescriptor<HomeAssistantLightAsset> DESCRIPTOR = new AssetDescriptor<>("lightbulb", null, HomeAssistantLightAsset.class);
     public static final AttributeDescriptor<Boolean> ONOFF = new AttributeDescriptor<>("lightStatus", ValueType.BOOLEAN);
-    public static final AttributeDescriptor<Integer> LIGHT_BRIGHTNESS = new AttributeDescriptor<>("brightness", ValueType.POSITIVE_INTEGER);
+    public static final AttributeDescriptor<Integer> LIGHT_BRIGHTNESS = new AttributeDescriptor<>("brightness", ValueType.INT_BYTE);
 
     protected HomeAssistantLightAsset() {
     }

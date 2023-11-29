@@ -27,7 +27,6 @@ import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.syslog.SyslogCategory;
 
-import java.util.Objects;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
@@ -66,12 +65,14 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             String msg = "Access token is not defined so cannot start protocol: " + this;
             LOG.warning(msg);
             return new IllegalArgumentException(msg);
+
         });
 
         client = new HomeAssistantClient(url, accessToken);
+        setConnectionStatus(ConnectionStatus.CONNECTING);
         if (client.isConnectionSuccessful()) {
-            LOG.info("Connection to HomeAssistant API successful");
             setConnectionStatus(ConnectionStatus.CONNECTED);
+            LOG.info("Connection to HomeAssistant API successful");
 
             assetService = container.getService(ProtocolAssetService.class);
             executorService = container.getExecutorService();
@@ -80,7 +81,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
             importHomeAssistantEntities();
             startWebSocketClient();
-
         } else {
             LOG.warning("Connection to HomeAssistant failed");
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
@@ -131,17 +131,18 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     @Override
     protected void doLinkedAttributeWrite(Attribute<?> attribute, HomeAssistantAgentLink agentLink, AttributeEvent event, Object processedValue) {
         LOG.info("Writing attribute: " + attribute.getName() + " to asset: " + event.getAssetId() + " with value: " + processedValue);
+
+        //TODO: Refactor to use command pattern (possibly)
         String value = processedValue.toString();
-        if (value.equals("on") || value.equals("true"))
-        {
-            client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, "");
-        }
-        else if (value.equals("off") || value.equals("false"))
-        {
+        if (value.equals("on") || value.equals("true") || attribute.getName().equals("brightness")) {
+            var setting = "";
+            if (attribute.getName().equals("brightness")) {
+                setting = "\"brightness\": " + value;
+            }
+            client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, setting);
+        } else if (value.equals("off") || value.equals("false")) {
             client.setEntityState(agentLink.domainId, "turn_off", agentLink.entityId, "");
         }
-
-
     }
 
     @Override
