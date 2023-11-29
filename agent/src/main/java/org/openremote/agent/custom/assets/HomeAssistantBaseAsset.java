@@ -62,36 +62,6 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
         return this;
     }
 
-//    public HomeAssistantBaseAsset setHomeAssistantTextAttributes(Map<String, Object> homeAssistantAttributes, AgentLink agentLink) {
-//        for (Map.Entry<String, Object> entry : homeAssistantAttributes.entrySet()) {
-//            AttributeDescriptor<String> homeAssistantAttribute = new AttributeDescriptor<>(entry.getKey(), ValueType.TEXT);
-//            Attribute<String> attr = getAttributes().getOrCreate(homeAssistantAttribute).addMeta(
-//                    new MetaItem<>(AGENT_LINK, agentLink)
-//            );
-//
-//                        lightAsset.getAttributes().get(BRIGHTNESS).ifPresent(attribute -> attribute.addOrReplaceMeta(
-//                new MetaItem<>(AGENT_LINK, new DefaultAgentLink(agent.getId()))
-//            ));
-//
-////
-////        Attribute<?> attr = asset.getAttributes().get(attrName).orElse(new Attribute<>(attrName, type).addMeta(
-////                        new MetaItem<>(MetaItemType.LABEL, name),
-////                        new MetaItem<>(AGENT_LINK, agentLink)
-////        ));
-////
-////        asset.getAttributes().addOrReplace(attr);
-//
-//
-//            if (entry.getValue() == null) {
-//                     attr.setValue("");
-//
-//            } else {
-//                attr.setValue(entry.getValue().toString());
-//            }
-//
-//        }
-//        return this;
-//    }
 
     public HomeAssistantBaseAsset setIcon(String value) {
         ICON = new AssetDescriptor<>(value, null, HomeAssistantBaseAsset.class);

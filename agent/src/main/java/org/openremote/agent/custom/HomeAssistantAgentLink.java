@@ -28,7 +28,6 @@ public class HomeAssistantAgentLink extends AgentLink<HomeAssistantAgentLink> {
     protected String domainId;
     protected String entityId;
 
-    // For Hydrators
     protected HomeAssistantAgentLink() {
     }
 

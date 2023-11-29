@@ -8,14 +8,11 @@ public class HomeAssistantLightAsset extends HomeAssistantBaseAsset {
 
     public static final AssetDescriptor<HomeAssistantLightAsset> DESCRIPTOR = new AssetDescriptor<>("lightbulb", null, HomeAssistantLightAsset.class);
 
-
     protected HomeAssistantLightAsset() {
-
     }
 
     public HomeAssistantLightAsset(String name) {
         super(name);
     }
-
 
 }

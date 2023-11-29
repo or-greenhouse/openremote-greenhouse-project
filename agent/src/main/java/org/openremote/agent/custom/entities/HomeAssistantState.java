@@ -3,29 +3,27 @@ package org.openremote.agent.custom.entities;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Map;
-
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class HomeAssistantStateEvent {
+public class HomeAssistantState {
     @JsonProperty("type")
-    private String eventType;
+    private String type;
 
     @JsonProperty("event")
-    private String event;
+    private HomeAssistantStateEvent event;
 
-    public String getEventType() {
-        return eventType;
+    public String getType() {
+        return type;
     }
 
-    public void setEventType(String eventType) {
-        this.eventType = eventType;
+    public void setType(String type) {
+        this.type = type;
     }
 
-    public String getEvent() {
+    public HomeAssistantStateEvent getEvent() {
         return event;
     }
 
-    public void setEvent(String event) {
+    public void setEvent(HomeAssistantStateEvent event) {
         this.event = event;
     }
 

@@ -28,7 +28,6 @@ import org.openremote.model.Container;
 import org.openremote.model.asset.Asset;
 import org.openremote.model.asset.AssetTreeNode;
 import org.openremote.model.asset.agent.ConnectionStatus;
-import org.openremote.model.asset.agent.DefaultAgentLink;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.protocol.ProtocolAssetDiscovery;
@@ -55,7 +54,8 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
     private final List<String> SUPPORTED_ENTITY_TYPES = new ArrayList<>(List.of("light", "switch", "binary_sensor", "sensor"));
     protected HomeAssistantClient client;
-    protected boolean running;
+    protected HomeAssistantWebSocketClient webSocketClient;
+    protected volatile boolean running;
 
 
     public HomeAssistantProtocol(HomeAssistantAgent agent) {
@@ -80,10 +80,19 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
         client = new HomeAssistantClient(url, accessToken);
         if (client.isConnectionSuccessful()) {
-            LOG.info("Connection to HomeAssistant successful");
+            LOG.info("Connection to HomeAssistant API successful");
             setConnectionStatus(ConnectionStatus.CONNECTED);
             assetService = container.getService(ProtocolAssetService.class);
             executorService = container.getExecutorService();
+
+            webSocketClient = new HomeAssistantWebSocketClient(this);
+            // Start the websocket client in a separate thread
+            executorService.submit(() -> {
+                webSocketClient.connect();
+                while (running) {
+                }
+            }, null);
+
         } else {
             LOG.warning("Connection to HomeAssistant failed");
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
@@ -112,7 +121,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     protected void doLinkedAttributeWrite(Attribute<?> attribute, HomeAssistantAgentLink agentLink, AttributeEvent event, Object processedValue) {
 
         LOG.info("Writing attribute: " + attribute.getName() + " to agent link: " + agentLink.getId() + " with value: " + processedValue);
-        client.setEntityState(agentLink.domainId, "turn_on" ,agentLink.entityId, "");
+        client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, "");
     }
 
     @Override
@@ -140,11 +149,11 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             setConnectionStatus(ConnectionStatus.CONNECTED);
             List<String> currentAssets = assetService.findAssets(agent.getId(), new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
 
+
             return executorService.submit(() -> {
                 for (HomeAssistantBaseEntity entity : homeAssistantBaseEntities) {
                     LOG.info("Found entity: " + entity.getEntityId());
                     String assetType = entity.getEntityId().split("\\.")[0];
-
 
                     if (!SUPPORTED_ENTITY_TYPES.contains(assetType)) continue;
 
@@ -173,5 +182,17 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             }, null);
         }
         return null;
+    }
+
+    public Asset<?> getAssetFromHomeAssistantEntityId(String homeAssistantEntityId) {
+
+        return assetService.findAssets(agent.getId(), new AssetQuery().types(Asset.class)).stream()
+                .filter(asset -> asset.getName().equals(homeAssistantEntityId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public void saveAssetChanges(Asset<?> asset) {
+        assetService.mergeAsset(asset);
     }
 }
