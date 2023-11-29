@@ -19,6 +19,7 @@
  */
 package org.openremote.manager.setup.custom;
 
+import org.openremote.agent.custom.HomeAssistantAgent;
 import org.openremote.manager.setup.ManagerSetup;
 import org.openremote.model.Constants;
 import org.openremote.model.Container;

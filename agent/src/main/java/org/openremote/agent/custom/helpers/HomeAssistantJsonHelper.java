@@ -26,4 +26,9 @@ public class HomeAssistantJsonHelper {
         }
         return Optional.of(output.toString());
     }
+
+    public static String getTypeFromEntityId(String entityId) {
+        String[] parts = entityId.split("\\.");
+        return parts[0];
+    }
 }

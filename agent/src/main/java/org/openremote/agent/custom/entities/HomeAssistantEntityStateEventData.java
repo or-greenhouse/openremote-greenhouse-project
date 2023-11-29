@@ -4,13 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class HomeAssistantStateEventData {
+public class HomeAssistantEntityStateEventData {
 
     @JsonProperty("entity_id")
     private String entityId;
 
     @JsonProperty("new_state")
-    private HomeAssistantStateEventDataState newState;
+    private HomeAssistantBaseEntity newBaseEntity;
 
 
     public void setEntityId(String entityId) {
@@ -21,11 +21,13 @@ public class HomeAssistantStateEventData {
         return entityId;
     }
 
-    public void setNewState(HomeAssistantStateEventDataState newState) {
-        this.newState = newState;
+    public void setNewBaseEntity(HomeAssistantBaseEntity newBaseEntity) {
+        this.newBaseEntity = newBaseEntity;
     }
 
-    public HomeAssistantStateEventDataState getNewState() {
-        return newState;
+    public HomeAssistantBaseEntity getNewBaseEntity() {
+        return newBaseEntity;
     }
+
+
 }

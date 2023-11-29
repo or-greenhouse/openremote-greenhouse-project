@@ -19,26 +19,14 @@
  */
 package org.openremote.agent.custom;
 
-import org.openremote.agent.custom.assets.HomeAssistantBaseAsset;
-import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
-import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.model.Container;
-import org.openremote.model.asset.Asset;
-import org.openremote.model.asset.AssetTreeNode;
 import org.openremote.model.asset.agent.ConnectionStatus;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
-import org.openremote.model.protocol.ProtocolAssetDiscovery;
-import org.openremote.model.query.AssetQuery;
 import org.openremote.model.syslog.SyslogCategory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Future;
-import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
@@ -48,13 +36,14 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
  * HomeAssistantAgent} {@link org.openremote.model.asset.Asset} and its' {@link org.openremote.model.asset.agent.Protocol}.
  * This example does nothing useful but is intended to show where protocol classes should be created.
  */
-public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, HomeAssistantAgentLink> implements ProtocolAssetDiscovery {
+public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, HomeAssistantAgentLink> {
 
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
-    private final List<String> SUPPORTED_ENTITY_TYPES = new ArrayList<>(List.of("light", "switch", "binary_sensor", "sensor"));
+
     protected HomeAssistantClient client;
     protected HomeAssistantWebSocketClient webSocketClient;
+    public HomeAssistantEntityProcessor entityProcessor;
     protected volatile boolean running;
 
 
@@ -82,23 +71,44 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         if (client.isConnectionSuccessful()) {
             LOG.info("Connection to HomeAssistant API successful");
             setConnectionStatus(ConnectionStatus.CONNECTED);
+
             assetService = container.getService(ProtocolAssetService.class);
             executorService = container.getExecutorService();
-
             webSocketClient = new HomeAssistantWebSocketClient(this);
-            // Start the websocket client in a separate thread
-            executorService.submit(() -> {
-                webSocketClient.connect();
-                while (running) {
-                }
-            }, null);
+            entityProcessor = new HomeAssistantEntityProcessor(assetService, agent.getId());
+
+            importHomeAssistantEntities();
+            startWebSocketClient();
 
         } else {
             LOG.warning("Connection to HomeAssistant failed");
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
         }
 
+    }
 
+
+    private void startWebSocketClient() {
+        executorService.submit(() -> {
+            webSocketClient.connect();
+            while (running) {
+                Thread.onSpinWait();
+            }
+        }, null);
+    }
+
+    private void importHomeAssistantEntities() {
+        var entities = client.getEntities();
+        if (entities.isPresent()) {
+            var assets = entityProcessor.processBaseEntities(entities.get());
+            if (assets.isPresent()) {
+                for (var asset : assets.get()) {
+                    asset.setParentId(agent.getId()); // set the parent to the agent (this)
+                    asset.setRealm(agent.getRealm()); // set the realm to the agent (this)
+                    assetService.mergeAsset(asset);
+                }
+            }
+        }
     }
 
 
@@ -135,64 +145,4 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
 
-    @Override
-    public Future<Void> startAssetDiscovery(Consumer<AssetTreeNode[]> assetConsumer) {
-        ConnectionStatus status = agent.getAgentStatus().orElse(ConnectionStatus.DISCONNECTED);
-        if (status == ConnectionStatus.DISCONNECTED) {
-            LOG.info("Agent not connected so cannot perform discovery");
-            return null;
-        }
-
-        List<HomeAssistantBaseEntity> homeAssistantBaseEntities = client.getEntities().orElse(null);
-
-        if (homeAssistantBaseEntities != null) {
-            setConnectionStatus(ConnectionStatus.CONNECTED);
-            List<String> currentAssets = assetService.findAssets(agent.getId(), new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
-
-
-            return executorService.submit(() -> {
-                for (HomeAssistantBaseEntity entity : homeAssistantBaseEntities) {
-                    LOG.info("Found entity: " + entity.getEntityId());
-                    String assetType = entity.getEntityId().split("\\.")[0];
-
-                    if (!SUPPORTED_ENTITY_TYPES.contains(assetType)) continue;
-
-                    HomeAssistantBaseAsset entityAsset = switch (assetType) {
-                        case "light" -> new HomeAssistantLightAsset(entity.getEntityId())
-                                .setAssetType(entity.getEntityId())
-                                .setState(entity.getState());
-                        default -> new HomeAssistantBaseAsset(entity.getEntityId())
-                                .setAssetType(entity.getEntityId())
-                                .setState(entity.getState());
-                    };
-
-                    Map<String, Object> homeAssistantAttributes = entity.getAttributes();
-                    var agentLink = new HomeAssistantAgentLink(agent.getId(), assetType, entity.getEntityId());
-                    entityAsset.setHomeAssistantTextAttributes(homeAssistantAttributes, agentLink);
-
-                    if (currentAssets.contains(entity.getEntityId())) {
-                        LOG.info("Entity already exists: " + entity.getEntityId());
-                        continue;
-                    }
-
-                    AssetTreeNode assetTreeNode = new AssetTreeNode(entityAsset);
-                    assetConsumer.accept(new AssetTreeNode[]{assetTreeNode});
-                }
-
-            }, null);
-        }
-        return null;
-    }
-
-    public Asset<?> getAssetFromHomeAssistantEntityId(String homeAssistantEntityId) {
-
-        return assetService.findAssets(agent.getId(), new AssetQuery().types(Asset.class)).stream()
-                .filter(asset -> asset.getName().equals(homeAssistantEntityId))
-                .findFirst()
-                .orElse(null);
-    }
-
-    public void saveAssetChanges(Asset<?> asset) {
-        assetService.mergeAsset(asset);
-    }
 }

@@ -9,6 +9,8 @@ import java.util.Map;
 public class HomeAssistantBaseEntity {
     @JsonProperty("entity_id")
     private String entityId;
+
+    @JsonProperty("state")
     private String state;
 
     @JsonProperty("attributes")
