@@ -79,7 +79,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             webSocketClient = new HomeAssistantWebSocketClient(this);
             entityProcessor = new HomeAssistantEntityProcessor(assetService, agent.getId());
 
-            importHomeAssistantEntities();
+            importEntities();
             startWebSocketClient();
         } else {
             LOG.warning("Connection to HomeAssistant failed");
@@ -87,7 +87,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         }
 
     }
-
 
     private void startWebSocketClient() {
         executorService.submit(() -> {
@@ -98,7 +97,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         }, null);
     }
 
-    private void importHomeAssistantEntities() {
+    private void importEntities() {
         var entities = client.getEntities();
         if (entities.isPresent()) {
             var assets = entityProcessor.processBaseEntities(entities.get());
