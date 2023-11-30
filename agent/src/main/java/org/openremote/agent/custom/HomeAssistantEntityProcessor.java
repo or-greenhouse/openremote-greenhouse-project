@@ -10,6 +10,7 @@ import org.openremote.model.asset.Asset;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.MetaItem;
 import org.openremote.model.query.AssetQuery;
+import org.openremote.model.syslog.SyslogCategory;
 import org.openremote.model.value.AttributeDescriptor;
 import org.openremote.model.value.ValueType;
 
@@ -17,16 +18,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
+import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 import static org.openremote.model.value.MetaItemType.AGENT_LINK;
 
 public class HomeAssistantEntityProcessor {
 
-    private final List<String> SUPPORTED_ENTITY_TYPES = new ArrayList<>(List.of(ENTITY_TYPE_LIGHT, ENTITY_TYPE_SWITCH, ENTITY_TYPE_BINARY_SENSOR, ENTITY_TYPE_SENSOR));
+    private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
+    private final List<String> SUPPORTED_ENTITY_TYPES = new ArrayList<>(List.of(ENTITY_TYPE_LIGHT, ENTITY_TYPE_SWITCH, ENTITY_TYPE_BINARY_SENSOR));
     public static final String ENTITY_TYPE_LIGHT = "light";
     public static final String ENTITY_TYPE_SWITCH = "switch";
     public static final String ENTITY_TYPE_BINARY_SENSOR = "binary_sensor";
-    public static final String ENTITY_TYPE_SENSOR = "sensor";
+    //public static final String ENTITY_TYPE_SENSOR = "sensor";
 
     private final ProtocolAssetService protocolAssetService;
     private final String agentId;
@@ -38,22 +42,19 @@ public class HomeAssistantEntityProcessor {
 
     public void processEntityStateEvent(HomeAssistantEntityStateEvent event) {
         var entityId = event.getData().getEntityId();
-        var entityTypeId = getTypeFromEntityId(entityId);
+        var entityTypeId = getEntityTypeFromEntityId(entityId);
 
         if (!SUPPORTED_ENTITY_TYPES.contains(entityTypeId)) {
             return; // skip unsupported entity types
         }
 
-        var asset = findAssetByHomeAssistantEntityId(entityId);
+        var asset = findAssetByEntityId(entityId);
         if (asset == null)
             return;
 
         switch (entityTypeId) {
-            case ENTITY_TYPE_LIGHT:
-                processLightEntityStateChange(asset, event);
-                break;
-            case ENTITY_TYPE_SWITCH, ENTITY_TYPE_BINARY_SENSOR, ENTITY_TYPE_SENSOR:
-                processBaseEntityStateChange(asset, event);
+            case ENTITY_TYPE_LIGHT, ENTITY_TYPE_SWITCH, ENTITY_TYPE_BINARY_SENSOR:
+                processEntityStateEvent(asset, event);
                 break;
             default:
         }
@@ -61,16 +62,16 @@ public class HomeAssistantEntityProcessor {
     }
 
 
-    public Optional<List<Asset<?>>> processBaseEntitiesDynamically(List<HomeAssistantBaseEntity> entities) {
+    public Optional<List<Asset<?>>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
         List<Asset<?>> assets = new ArrayList<>();
 
         for (HomeAssistantBaseEntity entity : entities) {
             Map<String, Object> homeAssistantAttributes = entity.getAttributes();
             String entityId = entity.getEntityId();
-            String entityType = getTypeFromEntityId(entityId);
+            String entityType = getEntityTypeFromEntityId(entityId);
 
-            if (currentAssets.contains(entityId)) {
+            if (currentAssets.contains(entityId) || !SUPPORTED_ENTITY_TYPES.contains(entityType)) {
                 continue; // skip unsupported entity types and already discovered assets
             }
 
@@ -111,14 +112,15 @@ public class HomeAssistantEntityProcessor {
                 if (attributeValue instanceof String) {
                     if (attributeValue.equals("on") || attributeValue.equals("off") || attributeValue.equals("true") || attributeValue.equals("false")) {
                         Attribute<Boolean> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.BOOLEAN));
-                        attribute.setValue(Boolean.parseBoolean((String) attributeValue));
+                        attribute.setValue(attributeValue.equals("on") || attributeValue.equals("true"));
                         continue; // skip to next iteration of loop
                     }
                 }
 
-                //String check (default) (text)
-                Attribute<String> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.TEXT));
-                attribute.setValue(attributeValue.toString());
+
+                //Handle other types of attributes (String, RGB, Date)
+
+
             }
 
             // add agent links to each attribute of the asset
@@ -137,60 +139,52 @@ public class HomeAssistantEntityProcessor {
 
 
     @SuppressWarnings("unchecked") // suppress unchecked cast warnings for attribute.get() calls
-    private void processLightEntityStateChange(Asset<?> asset, HomeAssistantEntityStateEvent event) {
-        var lightAssetStateAttribute = asset.getAttribute("state");
-        var lightAssetBrightnessAttribute = asset.getAttribute("brightness");
+    private void processEntityStateEvent(Asset<?> asset, HomeAssistantEntityStateEvent event) {
+        var stateAttribute = asset.getAttribute("state");
+        var brightnessAttribute = asset.getAttribute("brightness");
 
-        if (lightAssetStateAttribute.isEmpty() || lightAssetBrightnessAttribute.isEmpty())
-            return;
+        LOG.info("Processing entity state event for asset: " + asset.getName() + " with state: " + event.getData().getNewBaseEntity().getState());
 
-        if ((lightAssetBrightnessAttribute.get()).getClass().isAssignableFrom(Integer.class)) {
-            Attribute<Integer> attribute = (Attribute<Integer>) lightAssetBrightnessAttribute.get();
-            attribute.setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
-            asset.addOrReplaceAttributes(attribute);
+        //handle state (it attempts to cast to boolean first, then string)
+        if (stateAttribute.isPresent()) {
+            if (isAttributeAssignableFrom(stateAttribute.get(), Boolean.class)) {
+                Attribute<Boolean> attribute = (Attribute<Boolean>) stateAttribute.get();
+                attribute.setValue(event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true"));
+                asset.addOrReplaceAttributes(attribute);
+            } else if (isAttributeAssignableFrom(stateAttribute.get(), String.class)) {
+                Attribute<String> attribute = (Attribute<String>) stateAttribute.get();
+                attribute.setValue(event.getData().getNewBaseEntity().getState());
+                asset.addOrReplaceAttributes(attribute);
+            }
         }
 
-        if (lightAssetStateAttribute.get().getClass().isAssignableFrom(Boolean.class)) {
-            Attribute<Boolean> attribute = (Attribute<Boolean>) lightAssetStateAttribute.get();
-            attribute.setValue(event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true"));
-            asset.addOrReplaceAttributes(attribute);
-        } else {
-            Attribute<String> attribute = (Attribute<String>) lightAssetStateAttribute.get();
-            attribute.setValue(event.getData().getNewBaseEntity().getState());
-            asset.addOrReplaceAttributes(attribute);
-        }
-
-        this.protocolAssetService.mergeAsset(asset);
-    }
-
-    @SuppressWarnings("unchecked") // suppress unchecked cast warnings for attribute.get() calls
-    private void processBaseEntityStateChange(Asset<?> asset, HomeAssistantEntityStateEvent event) {
-        var baseAssetStateAttribute = asset.getAttribute("state");
-        if (baseAssetStateAttribute.isEmpty())
-            return;
-
-        if (baseAssetStateAttribute.get().getClass().isAssignableFrom(Boolean.class)) {
-            Attribute<Boolean> attribute = (Attribute<Boolean>) baseAssetStateAttribute.get();
-            attribute.setValue(event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true"));
-            asset.addOrReplaceAttributes(attribute);
-        } else {
-            Attribute<String> attribute = (Attribute<String>) baseAssetStateAttribute.get();
-            attribute.setValue(event.getData().getNewBaseEntity().getState());
-            asset.addOrReplaceAttributes(attribute);
+        //handle brightness (it attempts to cast to integer)
+        if (brightnessAttribute.isPresent()) {
+            if (isAttributeAssignableFrom(brightnessAttribute.get(), Integer.class)) {
+                Attribute<Integer> attribute = (Attribute<Integer>) brightnessAttribute.get();
+                attribute.setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
+                asset.addOrReplaceAttributes(attribute);
+            }
         }
 
         this.protocolAssetService.mergeAsset(asset);
     }
 
 
-    private Asset<?> findAssetByHomeAssistantEntityId(String homeAssistantEntityId) {
+    // Checks whether the attribute<?> can be assigned from the given class, allowing safe casting
+    private Boolean isAttributeAssignableFrom(Attribute<?> attribute, Class<?> clazz) {
+        return attribute.getType().getType().isAssignableFrom(clazz);
+    }
+
+
+    private Asset<?> findAssetByEntityId(String homeAssistantEntityId) {
         return protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream()
                 .filter(asset -> asset.getName().equals(homeAssistantEntityId))
                 .findFirst()
                 .orElse(null);
     }
 
-    private String getTypeFromEntityId(String entityId) {
+    private String getEntityTypeFromEntityId(String entityId) {
         String[] parts = entityId.split("\\.");
         return parts[0];
     }

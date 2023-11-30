@@ -88,7 +88,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     }
 
-
     private void startWebSocketClient() {
         executorService.submit(() -> {
             webSocketClient.connect();
@@ -101,7 +100,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     private void importHomeAssistantEntities() {
         var entities = client.getEntities();
         if (entities.isPresent()) {
-            var assets = entityProcessor.processBaseEntitiesDynamically(entities.get());
+            var assets = entityProcessor.convertEntitiesToAssets(entities.get());
             if (assets.isPresent()) {
                 for (var asset : assets.get()) {
                     asset.setParentId(agent.getId()); // set the parent to the agent (this)
