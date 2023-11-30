@@ -101,7 +101,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     private void importHomeAssistantEntities() {
         var entities = client.getEntities();
         if (entities.isPresent()) {
-            var assets = entityProcessor.processBaseEntities(entities.get());
+            var assets = entityProcessor.processBaseEntitiesDynamically(entities.get());
             if (assets.isPresent()) {
                 for (var asset : assets.get()) {
                     asset.setParentId(agent.getId()); // set the parent to the agent (this)
