@@ -9,8 +9,6 @@ import org.openremote.model.value.ValueType;
 public class HomeAssistantLightAsset extends HomeAssistantBaseAsset {
 
     public static final AssetDescriptor<HomeAssistantLightAsset> DESCRIPTOR = new AssetDescriptor<>("lightbulb", null, HomeAssistantLightAsset.class);
-    public static final AttributeDescriptor<Boolean> ONOFF = new AttributeDescriptor<>("lightStatus", ValueType.BOOLEAN);
-    public static final AttributeDescriptor<Integer> LIGHT_BRIGHTNESS = new AttributeDescriptor<>("brightness", ValueType.INT_BYTE);
 
     protected HomeAssistantLightAsset() {
     }
@@ -19,14 +17,5 @@ public class HomeAssistantLightAsset extends HomeAssistantBaseAsset {
         super(name);
     }
 
-    public HomeAssistantLightAsset setLightOnOff(Boolean value) {
-        getAttributes().getOrCreate(ONOFF).setValue(value);
-        return this;
-    }
-
-    public HomeAssistantLightAsset setLightBrightness(Integer value) {
-        getAttributes().getOrCreate(LIGHT_BRIGHTNESS).setValue(value);
-        return this;
-    }
 
 }

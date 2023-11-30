@@ -18,7 +18,6 @@ import static org.openremote.model.value.MetaItemType.READ_ONLY;
 public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
 
     public static AssetDescriptor<HomeAssistantBaseAsset> DESCRIPTOR = new AssetDescriptor<>("cube-outline", null, HomeAssistantBaseAsset.class);
-    public static final AttributeDescriptor<String> STATE = new AttributeDescriptor<>("state", ValueType.TEXT, new MetaItem<>(READ_ONLY));
     public static final AttributeDescriptor<String> ASSET_TYPE = new AttributeDescriptor<>("assetType", ValueType.TEXT, new MetaItem<>(READ_ONLY));
 
 
@@ -34,8 +33,4 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
         return this;
     }
 
-    public HomeAssistantBaseAsset setState(String value) {
-        getAttributes().getOrCreate(STATE).setValue(value);
-        return this;
-    }
 }

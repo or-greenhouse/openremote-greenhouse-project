@@ -1,8 +1,6 @@
 package org.openremote.agent.custom;
 
 import org.openremote.agent.custom.assets.HomeAssistantBaseAsset;
-import org.openremote.agent.custom.assets.HomeAssistantDynamicAsset;
-import org.openremote.agent.custom.assets.HomeAssistantDynamicLightAsset;
 import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.custom.entities.HomeAssistantEntityStateEvent;
@@ -62,62 +60,6 @@ public class HomeAssistantEntityProcessor {
 
     }
 
-    public Optional<List<Asset<?>>> processBaseEntities(List<HomeAssistantBaseEntity> entities) {
-        List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
-        List<Asset<?>> assets = new ArrayList<>();
-
-        for (HomeAssistantBaseEntity entity : entities) {
-            String entityId = entity.getEntityId();
-            String entityType = getTypeFromEntityId(entityId);
-            if (!SUPPORTED_ENTITY_TYPES.contains(entityType) || currentAssets.contains(entityId)) {
-                continue; // skip unsupported entity types and already discovered assets
-            }
-            Asset<?> asset;
-
-            //TODO: Refactor to make use of the factory design pattern
-            switch (entityType) {
-                case ENTITY_TYPE_LIGHT:
-                    asset = new HomeAssistantLightAsset(entity.getEntityId())
-                            .setLightBrightness(entity.getAttributes().get("brightness") != null ? (int) entity.getAttributes().get("brightness") : 0)
-                            .setLightOnOff(getBooleanStateFromEntityState(entity.getState()))
-                            .setState(entity.getState())
-                            .setAssetType(ENTITY_TYPE_LIGHT);
-                    break;
-                case ENTITY_TYPE_SWITCH:
-                    asset = new HomeAssistantBaseAsset(entity.getEntityId())
-                            .setAssetType(ENTITY_TYPE_SWITCH)
-                            .setState(entity.getState());
-
-                    break;
-                case ENTITY_TYPE_BINARY_SENSOR:
-                    asset = new HomeAssistantBaseAsset(entity.getEntityId())
-                            .setAssetType(ENTITY_TYPE_BINARY_SENSOR)
-                            .setState(entity.getState());
-                    break;
-                case ENTITY_TYPE_SENSOR:
-                    asset = new HomeAssistantBaseAsset(entity.getEntityId())
-                            .setAssetType(ENTITY_TYPE_SENSOR)
-                            .setState(entity.getState());
-                    break;
-                default:
-                    continue; // skip unsupported entity types
-            }
-
-            if (asset == null)
-                continue;
-
-
-            // add agent links to each attribute of the asset
-            asset.getAttributes().forEach(attribute -> {
-                var agentLink = new HomeAssistantAgentLink(agentId, entityType, entity.getEntityId());
-                attribute.addOrReplaceMeta(new MetaItem<>(AGENT_LINK, agentLink));
-            });
-
-            asset.setId(UniqueIdentifierGenerator.generateId());
-            assets.add(asset);
-        }
-        return Optional.of(assets);
-    }
 
     public Optional<List<Asset<?>>> processBaseEntitiesDynamically(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
@@ -133,13 +75,13 @@ public class HomeAssistantEntityProcessor {
             }
 
             Asset<?> asset;
-            asset = new HomeAssistantDynamicAsset(entityId);
+            asset = new HomeAssistantBaseAsset(entityId);
 
             if (entityType.equals(ENTITY_TYPE_LIGHT)) {
-                asset = new HomeAssistantDynamicLightAsset(entityId);
+                asset = new HomeAssistantLightAsset(entityId);
             }
 
-            //handle asset state
+            //handle asset state (text or boolean)
             var assetState = entity.getState();
             if (assetState.equals("on") || assetState.equals("off") || assetState.equals("true") || assetState.equals("false")) {
                 Attribute<Boolean> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>("state", ValueType.BOOLEAN));
@@ -149,7 +91,7 @@ public class HomeAssistantEntityProcessor {
                 attribute.setValue(assetState);
             }
 
-            //handle asset attributes
+            //handle the asset attributes
             for (Map.Entry<String, Object> entry : homeAssistantAttributes.entrySet()) {
                 var attributeValue = entry.getValue();
                 var attributeKey = entry.getKey();
@@ -157,6 +99,8 @@ public class HomeAssistantEntityProcessor {
                 if (entry.getKey().isEmpty() || entry.getValue() == null)
                     continue;
 
+
+                //Integer check
                 if (attributeValue instanceof Integer) {
                     Attribute<Integer> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.INT_BYTE));
                     attribute.setValue((Integer) attributeValue);
@@ -172,7 +116,7 @@ public class HomeAssistantEntityProcessor {
                     }
                 }
 
-                //String check (default)
+                //String check (default) (text)
                 Attribute<String> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.TEXT));
                 attribute.setValue(attributeValue.toString());
             }
@@ -192,40 +136,52 @@ public class HomeAssistantEntityProcessor {
     }
 
 
+    @SuppressWarnings("unchecked") // suppress unchecked cast warnings for attribute.get() calls
     private void processLightEntityStateChange(Asset<?> asset, HomeAssistantEntityStateEvent event) {
-        var lightAssetStateAttribute = asset.getAttribute(HomeAssistantBaseAsset.STATE);
-        var lightAssetOnOffAttribute = asset.getAttribute(HomeAssistantLightAsset.ONOFF);
-        var lightAssetBrightnessAttribute = asset.getAttribute(HomeAssistantLightAsset.LIGHT_BRIGHTNESS);
+        var lightAssetStateAttribute = asset.getAttribute("state");
+        var lightAssetBrightnessAttribute = asset.getAttribute("brightness");
 
-        if (lightAssetStateAttribute.isEmpty() || lightAssetOnOffAttribute.isEmpty() || lightAssetBrightnessAttribute.isEmpty())
+        if (lightAssetStateAttribute.isEmpty() || lightAssetBrightnessAttribute.isEmpty())
             return;
 
-        lightAssetStateAttribute.get().setValue(event.getData().getNewBaseEntity().getState());
-        lightAssetOnOffAttribute.get().setValue(getBooleanStateFromEntityState(event.getData().getNewBaseEntity().getState()));
-        lightAssetBrightnessAttribute.get()
-                .setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
+        if ((lightAssetBrightnessAttribute.get()).getClass().isAssignableFrom(Integer.class)) {
+            Attribute<Integer> attribute = (Attribute<Integer>) lightAssetBrightnessAttribute.get();
+            attribute.setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
+            asset.addOrReplaceAttributes(attribute);
+        }
 
-        asset.addOrReplaceAttributes(lightAssetStateAttribute.get());
-        asset.addOrReplaceAttributes(lightAssetOnOffAttribute.get());
-        asset.addOrReplaceAttributes(lightAssetBrightnessAttribute.get());
+        if (lightAssetStateAttribute.get().getClass().isAssignableFrom(Boolean.class)) {
+            Attribute<Boolean> attribute = (Attribute<Boolean>) lightAssetStateAttribute.get();
+            attribute.setValue(event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true"));
+            asset.addOrReplaceAttributes(attribute);
+        } else {
+            Attribute<String> attribute = (Attribute<String>) lightAssetStateAttribute.get();
+            attribute.setValue(event.getData().getNewBaseEntity().getState());
+            asset.addOrReplaceAttributes(attribute);
+        }
 
         this.protocolAssetService.mergeAsset(asset);
     }
 
+    @SuppressWarnings("unchecked") // suppress unchecked cast warnings for attribute.get() calls
     private void processBaseEntityStateChange(Asset<?> asset, HomeAssistantEntityStateEvent event) {
-        var baseAssetStateAttribute = asset.getAttribute(HomeAssistantBaseAsset.STATE);
-
+        var baseAssetStateAttribute = asset.getAttribute("state");
         if (baseAssetStateAttribute.isEmpty())
             return;
 
-        baseAssetStateAttribute.get().setValue(event.getData().getNewBaseEntity().getState());
-        asset.addOrReplaceAttributes(baseAssetStateAttribute.get());
+        if (baseAssetStateAttribute.get().getClass().isAssignableFrom(Boolean.class)) {
+            Attribute<Boolean> attribute = (Attribute<Boolean>) baseAssetStateAttribute.get();
+            attribute.setValue(event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true"));
+            asset.addOrReplaceAttributes(attribute);
+        } else {
+            Attribute<String> attribute = (Attribute<String>) baseAssetStateAttribute.get();
+            attribute.setValue(event.getData().getNewBaseEntity().getState());
+            asset.addOrReplaceAttributes(attribute);
+        }
+
         this.protocolAssetService.mergeAsset(asset);
     }
 
-    private boolean getBooleanStateFromEntityState(String state) {
-        return state.equals("on");
-    }
 
     private Asset<?> findAssetByHomeAssistantEntityId(String homeAssistantEntityId) {
         return protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream()
