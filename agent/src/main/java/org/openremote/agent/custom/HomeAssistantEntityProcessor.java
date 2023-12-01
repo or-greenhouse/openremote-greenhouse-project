@@ -2,6 +2,8 @@ package org.openremote.agent.custom;
 
 import org.openremote.agent.custom.assets.HomeAssistantBaseAsset;
 import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
+import org.openremote.agent.custom.assets.HomeAssistantSensorAsset;
+import org.openremote.agent.custom.assets.HomeAssistantSwitchAsset;
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.custom.entities.HomeAssistantEntityStateEvent;
 import org.openremote.agent.protocol.ProtocolAssetService;
@@ -22,6 +24,7 @@ import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 import static org.openremote.model.value.MetaItemType.AGENT_LINK;
+import static org.openremote.model.value.MetaItemType.READ_ONLY;
 
 public class HomeAssistantEntityProcessor {
 
@@ -40,6 +43,7 @@ public class HomeAssistantEntityProcessor {
         this.agentId = agentId;
     }
 
+    // Processes a Home Assistant entity state event and updates the appropriate asset
     public void processEntityStateEvent(HomeAssistantEntityStateEvent event) {
         var entityId = event.getData().getEntityId();
         var entityTypeId = getEntityTypeFromEntityId(entityId);
@@ -62,6 +66,7 @@ public class HomeAssistantEntityProcessor {
     }
 
 
+    // Converts a list of Home Assistant entities to a list of OpenRemote assets
     public Optional<List<Asset<?>>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
         List<Asset<?>> assets = new ArrayList<>();
@@ -78,9 +83,20 @@ public class HomeAssistantEntityProcessor {
             Asset<?> asset;
             asset = new HomeAssistantBaseAsset(entityId);
 
-            if (entityType.equals(ENTITY_TYPE_LIGHT)) {
-                asset = new HomeAssistantLightAsset(entityId);
+            // handle entity type (only used for icons)
+            switch (entityType) {
+                case ENTITY_TYPE_LIGHT:
+                    asset = new HomeAssistantLightAsset(entityId);
+                    break;
+                case ENTITY_TYPE_BINARY_SENSOR:
+                    asset = new HomeAssistantSensorAsset(entityId);
+                    break;
+                case ENTITY_TYPE_SWITCH:
+                    asset = new HomeAssistantSwitchAsset(entityId);
+                    break;
+                default:
             }
+
 
             //handle asset state (text or boolean)
             var assetState = entity.getState();
@@ -100,10 +116,9 @@ public class HomeAssistantEntityProcessor {
                 if (entry.getKey().isEmpty() || entry.getValue() == null)
                     continue;
 
-
                 //Integer check
                 if (attributeValue instanceof Integer) {
-                    Attribute<Integer> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.INT_BYTE));
+                    Attribute<Integer> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.POSITIVE_INTEGER));
                     attribute.setValue((Integer) attributeValue);
                     continue; // skip to next iteration of loop
                 }
@@ -117,6 +132,14 @@ public class HomeAssistantEntityProcessor {
                     }
                 }
 
+
+                if (attributeKey.equals("friendly_name") && attributeValue instanceof String)
+                {
+                    asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.TEXT))
+                            .addOrReplaceMeta(new MetaItem<>(READ_ONLY))
+                            .setValue((String)attributeValue);
+
+                }
 
                 //Handle other types of attributes (String, RGB, Date)
 
@@ -142,6 +165,8 @@ public class HomeAssistantEntityProcessor {
     private void processEntityStateEvent(Asset<?> asset, HomeAssistantEntityStateEvent event) {
         var stateAttribute = asset.getAttribute("state");
         var brightnessAttribute = asset.getAttribute("brightness");
+
+        //TODO: can be handled dynamically by using the attribute key from the event data
 
         LOG.info("Processing entity state event for asset: " + asset.getName() + " with state: " + event.getData().getNewBaseEntity().getState());
 
@@ -177,6 +202,7 @@ public class HomeAssistantEntityProcessor {
     }
 
 
+    // Retrieves the appropriate asset based on the given home assistant entity id
     private Asset<?> findAssetByEntityId(String homeAssistantEntityId) {
         return protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream()
                 .filter(asset -> asset.getName().equals(homeAssistantEntityId))
@@ -184,6 +210,7 @@ public class HomeAssistantEntityProcessor {
                 .orElse(null);
     }
 
+    // Retrieves the entity type from the given home assistant entity id (format <entity_type>.<entity_id>)
     private String getEntityTypeFromEntityId(String entityId) {
         String[] parts = entityId.split("\\.");
         return parts[0];

@@ -46,7 +46,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     public HomeAssistantEntityProcessor entityProcessor;
     protected volatile boolean running;
 
-
     public HomeAssistantProtocol(HomeAssistantAgent agent) {
         super(agent);
     }
@@ -88,6 +87,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     }
 
+    // Starts the WebSocket client in a separate thread
     private void startWebSocketClient() {
         executorService.submit(() -> {
             webSocketClient.connect();
@@ -97,6 +97,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         }, null);
     }
 
+    // Imports all entities from Home Assistant and merges them into the agents asset store
     private void importHomeAssistantEntities() {
         var entities = client.getEntities();
         if (entities.isPresent()) {

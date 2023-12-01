@@ -7,14 +7,14 @@ import org.openremote.model.value.AttributeDescriptor;
 import org.openremote.model.value.ValueType;
 
 @Entity
-public class HomeAssistantLightAsset extends HomeAssistantBaseAsset {
+public class HomeAssistantSensorAsset extends HomeAssistantBaseAsset {
 
-    public static final AssetDescriptor<HomeAssistantLightAsset> DESCRIPTOR = new AssetDescriptor<>("lightbulb", "e6688a", HomeAssistantLightAsset.class);
+    public static final AssetDescriptor<HomeAssistantSensorAsset> DESCRIPTOR = new AssetDescriptor<>("motion-sensor", "2386f0", HomeAssistantSensorAsset.class);
 
-    protected HomeAssistantLightAsset() {
+    protected HomeAssistantSensorAsset() {
     }
 
-    public HomeAssistantLightAsset(String name) {
+    public HomeAssistantSensorAsset(String name) {
         super(name);
     }
 

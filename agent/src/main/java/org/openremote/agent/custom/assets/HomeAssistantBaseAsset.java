@@ -17,7 +17,7 @@ import static org.openremote.model.value.MetaItemType.READ_ONLY;
 @Entity
 public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
 
-    public static AssetDescriptor<HomeAssistantBaseAsset> DESCRIPTOR = new AssetDescriptor<>("cube-outline", null, HomeAssistantBaseAsset.class);
+    public static AssetDescriptor<HomeAssistantBaseAsset> DESCRIPTOR = new AssetDescriptor<>("cube-outline", "03a6f0", HomeAssistantBaseAsset.class);
 
     protected HomeAssistantBaseAsset() {
     }
