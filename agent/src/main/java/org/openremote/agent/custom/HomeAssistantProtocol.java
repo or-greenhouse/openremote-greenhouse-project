@@ -42,7 +42,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
     public HomeAssistantEntityProcessor entityProcessor;
-    protected HomeAssistantClient client;
+    protected HomeAssistantHttpClient client;
     protected HomeAssistantWebSocketClient webSocketClient;
     protected volatile boolean running;
 
@@ -51,7 +51,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
     @Override
-    protected void doStart(Container container) throws Exception {
+    protected void doStart(Container container) {
         running = true;
 
         String url = agent.getHomeAssistantUrl().orElseThrow(() -> {
@@ -64,10 +64,9 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             String msg = "Access token is not defined so cannot start protocol: " + this;
             LOG.warning(msg);
             return new IllegalArgumentException(msg);
-
         });
 
-        client = new HomeAssistantClient(url, accessToken);
+        client = new HomeAssistantHttpClient(url, accessToken);
         setConnectionStatus(ConnectionStatus.CONNECTING);
         if (client.isConnectionSuccessful()) {
             setConnectionStatus(ConnectionStatus.CONNECTED);
@@ -78,7 +77,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             webSocketClient = new HomeAssistantWebSocketClient(this);
             entityProcessor = new HomeAssistantEntityProcessor(this, assetService);
 
-            importHomeAssistantEntities();
+            importAssets();
             startWebSocketClient();
         } else {
             LOG.warning("Connection to HomeAssistant failed");
@@ -98,7 +97,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
     // Imports all entities from Home Assistant and merges them into the agents asset store
-    private void importHomeAssistantEntities() {
+    private void importAssets() {
         var entities = client.getEntities();
         if (entities.isPresent()) {
             var assets = entityProcessor.convertEntitiesToAssets(entities.get());
@@ -114,18 +113,18 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
 
     @Override
-    protected void doStop(Container container) throws Exception {
+    protected void doStop(Container container) {
         running = false;
     }
 
     @Override
     protected void doLinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) throws RuntimeException {
-        LOG.info("Linking attribute: " + attribute.getName() + " to asset: " + assetId);
+        //We don't need to do anything here
     }
 
     @Override
     protected void doUnlinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) {
-        LOG.info("Unlinking attribute: " + attribute.getName() + " from asset: " + assetId);
+        //We don't need to do anything here
     }
 
     @Override
@@ -134,11 +133,12 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         if (asset == null) {
             return;
         }
-         if (attribute.getValue().equals(processedValue)) {
+        if (attribute.getValue().equals(processedValue)) {
             updateLinkedAttribute(event.getAttributeState());
-            return;
+            return; // no change - just update the linked attribute and return
         }
 
+        //TODO: Replace with command pattern implementation
         if (asset instanceof HomeAssistantLightAsset) {
             String value = processedValue.toString();
             if (attribute.getName().equals("state") && value.equals("on") || attribute.getName().equals("brightness")) {
@@ -155,10 +155,10 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         }
 
         updateLinkedAttribute(event.getAttributeState());
-
     }
 
-    public void handleHomeAssistantAssetChange(AttributeEvent event) {
+    // Called when an attribute is written to due to external changes
+    public void handleExternalAttributeChange(AttributeEvent event) {
         updateLinkedAttribute(event.getAttributeState());
     }
 

@@ -15,5 +15,4 @@ public class HomeAssistantSwitchAsset extends HomeAssistantBaseAsset {
         super(name);
     }
 
-
 }

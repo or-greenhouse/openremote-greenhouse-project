@@ -16,13 +16,13 @@ import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 
-public class HomeAssistantClient {
+public class HomeAssistantHttpClient {
 
-    private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantClient.class);
+    private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantHttpClient.class);
     private final String HomeAssistantUrl;
     private final String Token;
 
-    public HomeAssistantClient(String homeAssistantUrl, String token) {
+    public HomeAssistantHttpClient(String homeAssistantUrl, String token) {
         this.HomeAssistantUrl = homeAssistantUrl;
         this.Token = token;
     }
@@ -49,15 +49,15 @@ public class HomeAssistantClient {
         return response.isPresent();
     }
 
-    public boolean setEntityState(String domain, String service, String entity_id, String setting) {
-        LOG.info("CALLING entity service: " + service + " for entity: " + entity_id + " with setting: " + setting);
+    public void setEntityState(String domain, String service, String entity_id, String setting) {
         if (setting.isBlank()) {
-            return sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
+            sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
+            return;
         }
-        return sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\", " + setting + "}");
+        sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\", " + setting + "}");
     }
 
-    public boolean sendPostRequest(String path, String json) {
+    public void sendPostRequest(String path, String json) {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(HomeAssistantUrl + path))
@@ -68,10 +68,8 @@ public class HomeAssistantClient {
 
         try {
             client.send(request, HttpResponse.BodyHandlers.ofString());
-            return true;
         } catch (Exception e) {
             LOG.warning("Error sending request: " + e.getMessage());
-            return false;
         }
     }
 
@@ -84,7 +82,6 @@ public class HomeAssistantClient {
                 .build();
 
         try {
-            LOG.info("Sending request to: " + request.uri());
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return Optional.of(response.body());
 

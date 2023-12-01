@@ -18,5 +18,4 @@ public class HomeAssistantSensorAsset extends HomeAssistantBaseAsset {
         super(name);
     }
 
-
 }

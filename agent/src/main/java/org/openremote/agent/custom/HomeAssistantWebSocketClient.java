@@ -7,7 +7,6 @@ import org.openremote.agent.custom.entities.HomeAssistantEntityState;
 import org.openremote.model.syslog.SyslogCategory;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
@@ -15,17 +14,15 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 @ClientEndpoint
 public class HomeAssistantWebSocketClient {
 
-    private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantClient.class);
-    private final URI webSocketEndpoint;
+    private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantHttpClient.class);
+    private final String webSocketEndpoint;
     private final HomeAssistantProtocol protocol;
-
     private Session session;
 
-    public HomeAssistantWebSocketClient(HomeAssistantProtocol protocol) throws URISyntaxException {
+    public HomeAssistantWebSocketClient(HomeAssistantProtocol protocol) {
         var homeAssistantUrl = protocol.getAgent().getHomeAssistantUrl().orElseThrow();
-        var wsPath = homeAssistantUrl.replace("http", "ws");
-        //this.webSocketEndpoint = new URI(wsPath + "/api/websocket");
-        this.webSocketEndpoint = new URI("ws://84.25.33.19:8123" + "/api/websocket");
+        this.webSocketEndpoint = homeAssistantUrl.replace("http", "ws") + "/api/websocket";
+        //this.webSocketEndpoint = "ws://84.25.33.19:8123/api/websocket";
         this.protocol = protocol;
 
     }
@@ -34,7 +31,7 @@ public class HomeAssistantWebSocketClient {
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         try {
             LOG.info("Connecting to Home Assistant WebSocket Endpoint: " + webSocketEndpoint);
-            session = container.connectToServer(this, webSocketEndpoint);
+            session = container.connectToServer(this, URI.create(webSocketEndpoint));
         } catch (Exception e) {
             LOG.warning("Error establishing connection to Home Assistant WebSocket Endpoint: " + e.getMessage());
             throw new RuntimeException(e);
@@ -45,7 +42,6 @@ public class HomeAssistantWebSocketClient {
     public void sendMessage(String message) {
         try {
             session.getBasicRemote().sendText(message);
-            LOG.info("Sent message to Home Assistant WebSocket Endpoint: " + message);
         } catch (Exception e) {
             LOG.warning("Error sending message to Home Assistant WebSocket Endpoint: " + e.getMessage());
             throw new RuntimeException(e);
@@ -71,7 +67,6 @@ public class HomeAssistantWebSocketClient {
 
     @OnMessage
     private void onMessage(String message) {
-        LOG.info("Received message from Home Assistant WebSocket Endpoint: " + message);
         tryHandleEntityStateChange(message);
     }
 

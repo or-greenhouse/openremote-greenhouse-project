@@ -9,18 +9,18 @@ import org.openremote.agent.custom.entities.HomeAssistantEntityStateEvent;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.container.util.UniqueIdentifierGenerator;
 import org.openremote.model.asset.Asset;
-import org.openremote.model.attribute.*;
+import org.openremote.model.attribute.Attribute;
+import org.openremote.model.attribute.AttributeEvent;
+import org.openremote.model.attribute.MetaItem;
 import org.openremote.model.query.AssetQuery;
 import org.openremote.model.syslog.SyslogCategory;
 import org.openremote.model.value.AttributeDescriptor;
 import org.openremote.model.value.ValueType;
-import org.openremote.protocol.zwave.model.commandclasses.channel.value.Value;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
@@ -73,7 +73,7 @@ public class HomeAssistantEntityProcessor {
     public Optional<List<Asset<?>>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
         List<Asset<?>> assets = new ArrayList<>();
-
+        
         for (HomeAssistantBaseEntity entity : entities) {
             Map<String, Object> homeAssistantAttributes = entity.getAttributes();
             String entityId = entity.getEntityId();
@@ -99,7 +99,6 @@ public class HomeAssistantEntityProcessor {
                     break;
                 default:
             }
-
 
             //handle asset state (text or boolean)
             var assetState = entity.getState();
@@ -135,21 +134,15 @@ public class HomeAssistantEntityProcessor {
                     }
                 }
 
-
-                if (attributeKey.equals("friendly_name") && attributeValue instanceof String)
-                {
+                if (attributeKey.equals("friendly_name") && attributeValue instanceof String) {
                     asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.TEXT))
                             .addOrReplaceMeta(new MetaItem<>(READ_ONLY))
-                            .setValue((String)attributeValue);
+                            .setValue((String) attributeValue);
 
                 }
 
-                //Handle other types of attributes (String, RGB, Date)
-
-
+                //TODO: Handle other types of attributes (String, RGB, Date)
             }
-
-            // add agent links to each attribute of the asset
             asset.getAttributes().forEach(attribute -> {
                 var agentLink = new HomeAssistantAgentLink(agentId, entityType, entity.getEntityId());
                 attribute.addOrReplaceMeta(new MetaItem<>(AGENT_LINK, agentLink));
@@ -158,8 +151,6 @@ public class HomeAssistantEntityProcessor {
             asset.setId(UniqueIdentifierGenerator.generateId());
             assets.add(asset);
         }
-
-
         return Optional.of(assets);
     }
 
@@ -169,30 +160,30 @@ public class HomeAssistantEntityProcessor {
         if (asset == null)
             return;
 
+        // handle attributes dynamically
         for (Map.Entry<String, Object> eventAttribute : event.getData().getNewBaseEntity().getAttributes().entrySet()) {
             var assetAttribute = asset.getAttributes().get(eventAttribute.getKey());
             if (assetAttribute.isEmpty())
                 continue; // skip if the attribute doesn't exist
-
             if (assetAttribute.get().getValue().equals(eventAttribute.getValue()))
                 continue; // skip if the attribute value is the same
-
-            LOG.info("Updating attribute: " + assetAttribute.get().getName() + " to value: " + eventAttribute.getValue() + " for asset: " + asset.getId());
-            AttributeEvent attributeEvent = new AttributeEvent(asset.getId(),assetAttribute.get().getName(), eventAttribute.getValue());
-            protocol.handleHomeAssistantAssetChange(attributeEvent);
+            AttributeEvent attributeEvent = new AttributeEvent(asset.getId(), assetAttribute.get().getName(), eventAttribute.getValue());
+            protocol.handleExternalAttributeChange(attributeEvent);
         }
 
+        //state needs to be handled separately, its part of the attributes parent obj.
         var stateAttribute = asset.getAttribute("state");
-           if (stateAttribute.isPresent()) {
+        if (stateAttribute.isPresent()) {
+            AttributeEvent attributeEvent;
             if (isAttributeAssignableFrom(stateAttribute.get(), Boolean.class)) {
                 Attribute<Boolean> attribute = (Attribute<Boolean>) stateAttribute.get();
                 boolean value = event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true");
-                AttributeEvent attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), value);
-                protocolAssetService.sendAttributeEvent(attributeEvent);
+                attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), value);
+                protocol.handleExternalAttributeChange(attributeEvent);
             } else if (isAttributeAssignableFrom(stateAttribute.get(), String.class)) {
                 Attribute<String> attribute = (Attribute<String>) stateAttribute.get();
-                AttributeEvent attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), event.getData().getNewBaseEntity().getState());
-                protocol.handleHomeAssistantAssetChange(attributeEvent);
+                attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), event.getData().getNewBaseEntity().getState());
+                protocol.handleExternalAttributeChange(attributeEvent);
             }
         }
 
@@ -216,7 +207,5 @@ public class HomeAssistantEntityProcessor {
         String[] parts = entityId.split("\\.");
         return parts[0];
     }
-
-
 
 }
