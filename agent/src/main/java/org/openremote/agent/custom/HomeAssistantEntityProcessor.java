@@ -36,12 +36,14 @@ public class HomeAssistantEntityProcessor {
     public static final String ENTITY_TYPE_BINARY_SENSOR = "binary_sensor";
     //public static final String ENTITY_TYPE_SENSOR = "sensor";
 
+    private final HomeAssistantProtocol protocol;
     private final ProtocolAssetService protocolAssetService;
     private final String agentId;
 
-    public HomeAssistantEntityProcessor(ProtocolAssetService protocolAssetService, String agentId) {
-        this.protocolAssetService = protocolAssetService;
-        this.agentId = agentId;
+    public HomeAssistantEntityProcessor(HomeAssistantProtocol protocol, ProtocolAssetService assetService) {
+        this.protocol = protocol;
+        this.protocolAssetService = assetService;
+        this.agentId = protocol.getAgent().getId();
     }
 
     // Processes a Home Assistant entity state event and updates the appropriate asset
@@ -177,7 +179,7 @@ public class HomeAssistantEntityProcessor {
 
             LOG.info("Updating attribute: " + assetAttribute.get().getName() + " to value: " + eventAttribute.getValue() + " for asset: " + asset.getId());
             AttributeEvent attributeEvent = new AttributeEvent(asset.getId(),assetAttribute.get().getName(), eventAttribute.getValue());
-            protocolAssetService.sendAttributeEvent(attributeEvent);
+            protocol.handleHomeAssistantAssetChange(attributeEvent);
         }
 
         var stateAttribute = asset.getAttribute("state");
@@ -190,7 +192,7 @@ public class HomeAssistantEntityProcessor {
             } else if (isAttributeAssignableFrom(stateAttribute.get(), String.class)) {
                 Attribute<String> attribute = (Attribute<String>) stateAttribute.get();
                 AttributeEvent attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), event.getData().getNewBaseEntity().getState());
-                protocolAssetService.sendAttributeEvent(attributeEvent);
+                protocol.handleHomeAssistantAssetChange(attributeEvent);
             }
         }
 

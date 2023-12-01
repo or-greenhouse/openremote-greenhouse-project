@@ -76,7 +76,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             assetService = container.getService(ProtocolAssetService.class);
             executorService = container.getExecutorService();
             webSocketClient = new HomeAssistantWebSocketClient(this);
-            entityProcessor = new HomeAssistantEntityProcessor(assetService, agent.getId());
+            entityProcessor = new HomeAssistantEntityProcessor(this, assetService);
 
             importHomeAssistantEntities();
             startWebSocketClient();
@@ -139,22 +139,26 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             return;
         }
 
-//        if (asset instanceof HomeAssistantLightAsset) {
-//            String value = processedValue.toString();
-//            if (attribute.getName().equals("state") && value.equals("on") || attribute.getName().equals("brightness")) {
-//
-//                var setting = "";
-//                if (attribute.getName().equals("brightness")) {
-//                    setting = "\"brightness\": " + value;
-//                }
-//
-//                client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, setting);
-//            } else if (attribute.getName().equals("state") && value.equals("off")) {
-//                client.setEntityState(agentLink.domainId, "turn_off", agentLink.entityId, "");
-//            }
-//        }
+        if (asset instanceof HomeAssistantLightAsset) {
+            String value = processedValue.toString();
+            if (attribute.getName().equals("state") && value.equals("on") || attribute.getName().equals("brightness")) {
 
-        // triggers the asset to update its' linked attribute
+                var setting = "";
+                if (attribute.getName().equals("brightness")) {
+                    setting = "\"brightness\": " + value;
+                }
+
+                client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, setting);
+            } else if (attribute.getName().equals("state") && value.equals("off")) {
+                client.setEntityState(agentLink.domainId, "turn_off", agentLink.entityId, "");
+            }
+        }
+
+        updateLinkedAttribute(event.getAttributeState());
+
+    }
+
+    public void handleHomeAssistantAssetChange(AttributeEvent event) {
         updateLinkedAttribute(event.getAttributeState());
     }
 
