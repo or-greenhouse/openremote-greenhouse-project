@@ -9,17 +9,18 @@ import org.openremote.agent.custom.entities.HomeAssistantEntityStateEvent;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.container.util.UniqueIdentifierGenerator;
 import org.openremote.model.asset.Asset;
-import org.openremote.model.attribute.Attribute;
-import org.openremote.model.attribute.MetaItem;
+import org.openremote.model.attribute.*;
 import org.openremote.model.query.AssetQuery;
 import org.openremote.model.syslog.SyslogCategory;
 import org.openremote.model.value.AttributeDescriptor;
 import org.openremote.model.value.ValueType;
+import org.openremote.protocol.zwave.model.commandclasses.channel.value.Value;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
@@ -163,44 +164,42 @@ public class HomeAssistantEntityProcessor {
 
     @SuppressWarnings("unchecked") // suppress unchecked cast warnings for attribute.get() calls
     private void processEntityStateEvent(Asset<?> asset, HomeAssistantEntityStateEvent event) {
+        if (asset == null)
+            return;
+
+        for (Map.Entry<String, Object> eventAttribute : event.getData().getNewBaseEntity().getAttributes().entrySet()) {
+            var assetAttribute = asset.getAttributes().get(eventAttribute.getKey());
+            if (assetAttribute.isEmpty())
+                continue; // skip if the attribute doesn't exist
+
+            if (assetAttribute.get().getValue().equals(eventAttribute.getValue()))
+                continue; // skip if the attribute value is the same
+
+            LOG.info("Updating attribute: " + assetAttribute.get().getName() + " to value: " + eventAttribute.getValue() + " for asset: " + asset.getId());
+            AttributeEvent attributeEvent = new AttributeEvent(asset.getId(),assetAttribute.get().getName(), eventAttribute.getValue());
+            protocolAssetService.sendAttributeEvent(attributeEvent);
+        }
+
         var stateAttribute = asset.getAttribute("state");
-        var brightnessAttribute = asset.getAttribute("brightness");
-
-        //TODO: can be handled dynamically by using the attribute key from the event data
-
-        LOG.info("Processing entity state event for asset: " + asset.getName() + " with state: " + event.getData().getNewBaseEntity().getState());
-
-        //handle state (it attempts to cast to boolean first, then string)
-        if (stateAttribute.isPresent()) {
+           if (stateAttribute.isPresent()) {
             if (isAttributeAssignableFrom(stateAttribute.get(), Boolean.class)) {
                 Attribute<Boolean> attribute = (Attribute<Boolean>) stateAttribute.get();
-                attribute.setValue(event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true"));
-                asset.addOrReplaceAttributes(attribute);
+                boolean value = event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true");
+                AttributeEvent attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), value);
+                protocolAssetService.sendAttributeEvent(attributeEvent);
             } else if (isAttributeAssignableFrom(stateAttribute.get(), String.class)) {
                 Attribute<String> attribute = (Attribute<String>) stateAttribute.get();
-                attribute.setValue(event.getData().getNewBaseEntity().getState());
-                asset.addOrReplaceAttributes(attribute);
+                AttributeEvent attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), event.getData().getNewBaseEntity().getState());
+                protocolAssetService.sendAttributeEvent(attributeEvent);
             }
         }
 
-        //handle brightness (it attempts to cast to integer)
-        if (brightnessAttribute.isPresent()) {
-            if (isAttributeAssignableFrom(brightnessAttribute.get(), Integer.class)) {
-                Attribute<Integer> attribute = (Attribute<Integer>) brightnessAttribute.get();
-                attribute.setValue(event.getData().getNewBaseEntity().getAttributes().get("brightness") != null ? (int) event.getData().getNewBaseEntity().getAttributes().get("brightness") : 0);
-                asset.addOrReplaceAttributes(attribute);
-            }
-        }
-
-        this.protocolAssetService.mergeAsset(asset);
     }
-
 
     // Checks whether the attribute<?> can be assigned from the given class, allowing safe casting
     private Boolean isAttributeAssignableFrom(Attribute<?> attribute, Class<?> clazz) {
         return attribute.getType().getType().isAssignableFrom(clazz);
     }
-
 
     // Retrieves the appropriate asset based on the given home assistant entity id
     private Asset<?> findAssetByEntityId(String homeAssistantEntityId) {
@@ -215,5 +214,7 @@ public class HomeAssistantEntityProcessor {
         String[] parts = entityId.split("\\.");
         return parts[0];
     }
+
+
 
 }

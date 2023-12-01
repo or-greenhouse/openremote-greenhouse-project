@@ -49,16 +49,15 @@ public class HomeAssistantClient {
         return response.isPresent();
     }
 
-    public void setEntityState(String domain, String service, String entity_id, String setting) {
+    public boolean setEntityState(String domain, String service, String entity_id, String setting) {
         LOG.info("CALLING entity service: " + service + " for entity: " + entity_id + " with setting: " + setting);
         if (setting.isBlank()) {
-            sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
-            return;
+            return sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
         }
-        sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\", " + setting + "}");
+        return sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\", " + setting + "}");
     }
 
-    public void sendPostRequest(String path, String json) {
+    public boolean sendPostRequest(String path, String json) {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(HomeAssistantUrl + path))
@@ -69,8 +68,10 @@ public class HomeAssistantClient {
 
         try {
             client.send(request, HttpResponse.BodyHandlers.ofString());
+            return true;
         } catch (Exception e) {
             LOG.warning("Error sending request: " + e.getMessage());
+            return false;
         }
     }
 

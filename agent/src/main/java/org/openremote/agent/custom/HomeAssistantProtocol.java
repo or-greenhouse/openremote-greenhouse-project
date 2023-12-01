@@ -19,6 +19,7 @@
  */
 package org.openremote.agent.custom;
 
+import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
 import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.model.Container;
@@ -40,10 +41,9 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
-
+    public HomeAssistantEntityProcessor entityProcessor;
     protected HomeAssistantClient client;
     protected HomeAssistantWebSocketClient webSocketClient;
-    public HomeAssistantEntityProcessor entityProcessor;
     protected volatile boolean running;
 
     public HomeAssistantProtocol(HomeAssistantAgent agent) {
@@ -120,29 +120,42 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
     @Override
     protected void doLinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) throws RuntimeException {
-
+        LOG.info("Linking attribute: " + attribute.getName() + " to asset: " + assetId);
     }
 
     @Override
     protected void doUnlinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) {
-
+        LOG.info("Unlinking attribute: " + attribute.getName() + " from asset: " + assetId);
     }
 
     @Override
     protected void doLinkedAttributeWrite(Attribute<?> attribute, HomeAssistantAgentLink agentLink, AttributeEvent event, Object processedValue) {
-        LOG.info("Writing attribute: " + attribute.getName() + " to asset: " + event.getAssetId() + " with value: " + processedValue);
-
-        //TODO: Refactor to use command pattern (possibly)
-        String value = processedValue.toString();
-        if (value.equals("on") || value.equals("true") || attribute.getName().equals("brightness")) {
-            var setting = "";
-            if (attribute.getName().equals("brightness")) {
-                setting = "\"brightness\": " + value;
-            }
-            client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, setting);
-        } else if (value.equals("off") || value.equals("false")) {
-            client.setEntityState(agentLink.domainId, "turn_off", agentLink.entityId, "");
+        var asset = assetService.findAsset(event.getAssetId());
+        if (asset == null) {
+            return;
         }
+         if (attribute.getValue().equals(processedValue)) {
+            updateLinkedAttribute(event.getAttributeState());
+            return;
+        }
+
+//        if (asset instanceof HomeAssistantLightAsset) {
+//            String value = processedValue.toString();
+//            if (attribute.getName().equals("state") && value.equals("on") || attribute.getName().equals("brightness")) {
+//
+//                var setting = "";
+//                if (attribute.getName().equals("brightness")) {
+//                    setting = "\"brightness\": " + value;
+//                }
+//
+//                client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, setting);
+//            } else if (attribute.getName().equals("state") && value.equals("off")) {
+//                client.setEntityState(agentLink.domainId, "turn_off", agentLink.entityId, "");
+//            }
+//        }
+
+        // triggers the asset to update its' linked attribute
+        updateLinkedAttribute(event.getAttributeState());
     }
 
     @Override
