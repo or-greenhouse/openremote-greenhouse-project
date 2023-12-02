@@ -47,7 +47,7 @@ public class HomeAssistantEntityProcessor {
     }
 
     // Processes a Home Assistant entity state event and updates the appropriate asset
-    public void processEntityStateEvent(HomeAssistantEntityStateEvent event) {
+    public void handleEntityStateEvent(HomeAssistantEntityStateEvent event) {
         var entityId = event.getData().getEntityId();
         var entityTypeId = getEntityTypeFromEntityId(entityId);
 
@@ -73,7 +73,7 @@ public class HomeAssistantEntityProcessor {
     public Optional<List<Asset<?>>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
         List<Asset<?>> assets = new ArrayList<>();
-        
+
         for (HomeAssistantBaseEntity entity : entities) {
             Map<String, Object> homeAssistantAttributes = entity.getAttributes();
             String entityId = entity.getEntityId();

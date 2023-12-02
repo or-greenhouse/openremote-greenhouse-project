@@ -74,7 +74,7 @@ public class HomeAssistantWebSocketClient {
         try {
             ObjectMapper mapper = new ObjectMapper();
             HomeAssistantEntityState event = mapper.readValue(message, HomeAssistantEntityState.class);
-            protocol.entityProcessor.processEntityStateEvent(event.getEvent());
+            protocol.entityProcessor.handleEntityStateEvent(event.getEvent());
         } catch (JsonProcessingException e) {
             LOG.warning("Error parsing message from Home Assistant WebSocket Endpoint: " + e.getMessage());
         }
