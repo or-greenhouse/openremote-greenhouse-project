@@ -50,6 +50,9 @@ public class HomeAssistantHttpClient {
     }
 
     public void setEntityState(String domain, String service, String entity_id, String setting) {
+
+        LOG.info("Setting entity state: " + domain + "." + service + " " + entity_id + " " + setting);
+
         if (setting.isBlank()) {
             sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
             return;
@@ -65,7 +68,6 @@ public class HomeAssistantHttpClient {
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
-
         try {
             client.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (Exception e) {

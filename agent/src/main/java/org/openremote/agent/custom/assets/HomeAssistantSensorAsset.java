@@ -14,8 +14,8 @@ public class HomeAssistantSensorAsset extends HomeAssistantBaseAsset {
     protected HomeAssistantSensorAsset() {
     }
 
-    public HomeAssistantSensorAsset(String name) {
-        super(name);
+    public HomeAssistantSensorAsset(String name, String entityId) {
+        super(name, entityId);
     }
 
 }

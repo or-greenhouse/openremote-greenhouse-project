@@ -23,11 +23,15 @@ import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
 import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.model.Container;
+import org.openremote.model.asset.AssetTreeNode;
 import org.openremote.model.asset.agent.ConnectionStatus;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
+import org.openremote.model.protocol.ProtocolAssetDiscovery;
 import org.openremote.model.syslog.SyslogCategory;
 
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
@@ -37,7 +41,7 @@ import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
  * HomeAssistantAgent} {@link org.openremote.model.asset.Asset} and its' {@link org.openremote.model.asset.agent.Protocol}.
  * This example does nothing useful but is intended to show where protocol classes should be created.
  */
-public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, HomeAssistantAgentLink> {
+public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, HomeAssistantAgentLink> implements ProtocolAssetDiscovery {
 
     public static final String PROTOCOL_DISPLAY_NAME = "HomeAssistant Client";
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
@@ -68,6 +72,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
         client = new HomeAssistantHttpClient(url, accessToken);
         setConnectionStatus(ConnectionStatus.CONNECTING);
+
         if (client.isConnectionSuccessful()) {
             setConnectionStatus(ConnectionStatus.CONNECTED);
             LOG.info("Connection to HomeAssistant API successful");
@@ -87,6 +92,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
     // Starts the WebSocket client in a separate thread
+    // TODO: Improve this to also handle reconnects and change the connection status accordingly
     private void startWebSocketClient() {
         executorService.submit(() -> {
             webSocketClient.connect();
@@ -97,18 +103,18 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
     // Imports all entities from Home Assistant and merges them into the agents asset store
+    // Uses the assetDiscoveryConsumer to pass the assets back to the agent
     private void importAssets() {
-        var entities = client.getEntities();
-        if (entities.isPresent()) {
-            var assets = entityProcessor.convertEntitiesToAssets(entities.get());
-            if (assets.isPresent()) {
-                for (var asset : assets.get()) {
-                    asset.setParentId(agent.getId()); // set the parent to the agent (this)
-                    asset.setRealm(agent.getRealm()); // set the realm to the agent (this)
-                    assetService.mergeAsset(asset);
+        var assetConsumer = new Consumer<AssetTreeNode[]>() {
+            @Override
+            public void accept(AssetTreeNode[] assetTreeNodes) {
+                for (var assetTreeNode : assetTreeNodes) {
+                    assetService.mergeAsset(assetTreeNode.getAsset());
                 }
             }
-        }
+        };
+
+        startAssetDiscovery(assetConsumer);
     }
 
 
@@ -138,19 +144,17 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             return; // no change - just update the linked attribute and return
         }
 
+
         //TODO: Replace with command pattern implementation
         if (asset instanceof HomeAssistantLightAsset) {
-            String value = processedValue.toString();
-            if (attribute.getName().equals("state") && value.equals("on") || attribute.getName().equals("brightness")) {
-
-                var setting = "";
-                if (attribute.getName().equals("brightness")) {
-                    setting = "\"brightness\": " + value;
-                }
-
-                client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, setting);
-            } else if (attribute.getName().equals("state") && value.equals("off")) {
-                client.setEntityState(agentLink.domainId, "turn_off", agentLink.entityId, "");
+            LOG.info("Writing attribute: " + attribute.getName() + " with value: " + processedValue + " to Home Assistant");
+            String processedValueString = processedValue.toString();
+            if (attribute.getName().equals("state")) { // turn on/off light
+                var service = "toggle";
+                client.setEntityState(agentLink.domainId, service, agentLink.entityId, "");
+            } else {
+                var settingKey = attribute.getName();
+                client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, "\"" + settingKey + "\": \"" + processedValueString + "\"");
             }
         }
 
@@ -173,4 +177,23 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     }
 
 
+    @Override
+    public Future<Void> startAssetDiscovery(Consumer<AssetTreeNode[]> assetConsumer) {
+        var entities = client.getEntities();
+        if (entities.isPresent()) {
+            var assets = entityProcessor.convertEntitiesToAssets(entities.get());
+            if (assets.isPresent()) {
+
+                //TODO: Remove assets that are no longer present in Home Assistant
+
+                for (var asset : assets.get()) {
+                    asset.setParentId(agent.getId());
+                    asset.setRealm(agent.getRealm());
+                    AssetTreeNode node = new AssetTreeNode(asset);
+                    assetConsumer.accept(new AssetTreeNode[]{node});
+                }
+            }
+        }
+        return null;
+    }
 }

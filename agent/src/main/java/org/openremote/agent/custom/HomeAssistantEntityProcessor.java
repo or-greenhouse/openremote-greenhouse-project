@@ -25,7 +25,6 @@ import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 import static org.openremote.model.value.MetaItemType.AGENT_LINK;
-import static org.openremote.model.value.MetaItemType.READ_ONLY;
 
 public class HomeAssistantEntityProcessor {
 
@@ -34,7 +33,7 @@ public class HomeAssistantEntityProcessor {
     public static final String ENTITY_TYPE_LIGHT = "light";
     public static final String ENTITY_TYPE_SWITCH = "switch";
     public static final String ENTITY_TYPE_BINARY_SENSOR = "binary_sensor";
-    //public static final String ENTITY_TYPE_SENSOR = "sensor";
+    public static final String ENTITY_TYPE_SENSOR = "sensor";
 
     private final HomeAssistantProtocol protocol;
     private final ProtocolAssetService protocolAssetService;
@@ -59,19 +58,18 @@ public class HomeAssistantEntityProcessor {
         if (asset == null)
             return;
 
-        switch (entityTypeId) {
-            case ENTITY_TYPE_LIGHT, ENTITY_TYPE_SWITCH, ENTITY_TYPE_BINARY_SENSOR:
-                processEntityStateEvent(asset, event);
-                break;
-            default:
-        }
-
+        processEntityStateEvent(asset, event);
     }
 
 
     // Converts a list of Home Assistant entities to a list of OpenRemote assets
     public Optional<List<Asset<?>>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
-        List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream().map(Asset::getName).toList();
+
+        // Retrieve the current assets for this agent based on the entity id attribute
+        List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
+                .map(asset -> asset.getAttributes().getValue("HomeAssistantEntityId").orElseThrow().toString())
+                .toList();
+
         List<Asset<?>> assets = new ArrayList<>();
 
         for (HomeAssistantBaseEntity entity : entities) {
@@ -83,24 +81,17 @@ public class HomeAssistantEntityProcessor {
                 continue; // skip unsupported entity types and already discovered assets
             }
 
-            Asset<?> asset;
-            asset = new HomeAssistantBaseAsset(entityId);
+            // instantiate the appropriate asset class (only used for icons)
+            var friendlyName = (String) homeAssistantAttributes.get("friendly_name"); // friendly name always exists for all entities from the Home Assistant API
+            Asset<?> asset = switch (entityType) {
+                case ENTITY_TYPE_LIGHT -> new HomeAssistantLightAsset(friendlyName, entityId);
+                case ENTITY_TYPE_BINARY_SENSOR -> new HomeAssistantSensorAsset(friendlyName, entityId);
+                case ENTITY_TYPE_SWITCH -> new HomeAssistantSwitchAsset(friendlyName, entityId);
+                default -> new HomeAssistantBaseAsset(friendlyName, entityId);
+            };
 
-            // handle entity type (only used for icons)
-            switch (entityType) {
-                case ENTITY_TYPE_LIGHT:
-                    asset = new HomeAssistantLightAsset(entityId);
-                    break;
-                case ENTITY_TYPE_BINARY_SENSOR:
-                    asset = new HomeAssistantSensorAsset(entityId);
-                    break;
-                case ENTITY_TYPE_SWITCH:
-                    asset = new HomeAssistantSwitchAsset(entityId);
-                    break;
-                default:
-            }
 
-            //handle asset state (text or boolean)
+            //handle state (text or boolean)
             var assetState = entity.getState();
             if (assetState.equals("on") || assetState.equals("off") || assetState.equals("true") || assetState.equals("false")) {
                 Attribute<Boolean> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>("state", ValueType.BOOLEAN));
@@ -110,38 +101,34 @@ public class HomeAssistantEntityProcessor {
                 attribute.setValue(assetState);
             }
 
-            //handle the asset attributes
+            //handle the attributes
             for (Map.Entry<String, Object> entry : homeAssistantAttributes.entrySet()) {
                 var attributeValue = entry.getValue();
                 var attributeKey = entry.getKey();
 
+                //Skip empty attributes
                 if (entry.getKey().isEmpty() || entry.getValue() == null)
                     continue;
+                //Do not import Min, Max attributes
+                if (attributeKey.contains("min") || attributeKey.contains("max"))
+                    continue;
 
-                //Integer check
+                //Integer type check
                 if (attributeValue instanceof Integer) {
                     Attribute<Integer> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.POSITIVE_INTEGER));
                     attribute.setValue((Integer) attributeValue);
                     continue; // skip to next iteration of loop
                 }
 
-                //String boolean check (true, false, on, off)
+                //String based boolean check (true, false, on, off)
                 if (attributeValue instanceof String) {
                     if (attributeValue.equals("on") || attributeValue.equals("off") || attributeValue.equals("true") || attributeValue.equals("false")) {
                         Attribute<Boolean> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.BOOLEAN));
                         attribute.setValue(attributeValue.equals("on") || attributeValue.equals("true"));
-                        continue; // skip to next iteration of loop
                     }
                 }
 
-                if (attributeKey.equals("friendly_name") && attributeValue instanceof String) {
-                    asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.TEXT))
-                            .addOrReplaceMeta(new MetaItem<>(READ_ONLY))
-                            .setValue((String) attributeValue);
-
-                }
-
-                //TODO: Handle other types of attributes (String, RGB, Date)
+                //TODO: Handle other types of attributes (String, RGB, Date, Arrays, etc.)
             }
             asset.getAttributes().forEach(attribute -> {
                 var agentLink = new HomeAssistantAgentLink(agentId, entityType, entity.getEntityId());
@@ -157,8 +144,6 @@ public class HomeAssistantEntityProcessor {
 
     @SuppressWarnings("unchecked") // suppress unchecked cast warnings for attribute.get() calls
     private void processEntityStateEvent(Asset<?> asset, HomeAssistantEntityStateEvent event) {
-        if (asset == null)
-            return;
 
         // handle attributes dynamically
         for (Map.Entry<String, Object> eventAttribute : event.getData().getNewBaseEntity().getAttributes().entrySet()) {
@@ -196,10 +181,11 @@ public class HomeAssistantEntityProcessor {
 
     // Retrieves the appropriate asset based on the given home assistant entity id
     private Asset<?> findAssetByEntityId(String homeAssistantEntityId) {
-        return protocolAssetService.findAssets(agentId, new AssetQuery().types(Asset.class)).stream()
-                .filter(asset -> asset.getName().equals(homeAssistantEntityId))
-                .findFirst()
-                .orElse(null);
+
+        return protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
+                .filter(asset -> asset.getAttributes().getValue("HomeAssistantEntityId").orElseThrow().toString().equals(homeAssistantEntityId)).findFirst().orElse(null);
+
+
     }
 
     // Retrieves the entity type from the given home assistant entity id (format <entity_type>.<entity_id>)

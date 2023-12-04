@@ -11,8 +11,8 @@ public class HomeAssistantSwitchAsset extends HomeAssistantBaseAsset {
     protected HomeAssistantSwitchAsset() {
     }
 
-    public HomeAssistantSwitchAsset(String name) {
-        super(name);
+    public HomeAssistantSwitchAsset(String name, String entityId) {
+        super(name, entityId);
     }
 
 }
