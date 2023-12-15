@@ -102,12 +102,14 @@ public class HomeAssistantEntityProcessor {
 
             //handle the attributes
             for (Map.Entry<String, Object> entry : homeAssistantAttributes.entrySet()) {
+                LOG.info("Processing attribute: " + entry.getKey() + " with value: " + entry.getValue());
                 var attributeValue = entry.getValue();
                 var attributeKey = entry.getKey();
 
                 //Skip empty attributes
                 if (entry.getKey().isEmpty() || entry.getValue() == null)
                     continue;
+
                 //Do not import Min, Max attributes
                 if (attributeKey.contains("min") || attributeKey.contains("max"))
                     continue;

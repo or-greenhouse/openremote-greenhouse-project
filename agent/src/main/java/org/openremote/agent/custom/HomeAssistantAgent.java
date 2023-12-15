@@ -51,7 +51,7 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
     public static final AttributeDescriptor<String> HOME_ASSISTANT_URL = new AttributeDescriptor<>("HomeAssistantURL", ValueType.HTTP_URL);
 
     public static final AttributeDescriptor<String> IMPORTED_ENTITY_TYPES = new AttributeDescriptor<>("ImportedEntityTypes", ValueType.TEXT);
-    
+
     public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> DESCRIPTOR = new AgentDescriptor<>(
             HomeAssistantAgent.class, HomeAssistantProtocol.class, HomeAssistantAgentLink.class
     );

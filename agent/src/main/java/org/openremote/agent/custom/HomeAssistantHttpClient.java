@@ -30,6 +30,7 @@ public class HomeAssistantHttpClient {
     public Optional<List<HomeAssistantBaseEntity>> getEntities() {
         Optional<String> response = sendGetRequest("/api/states");
         if (response.isPresent()) {
+            LOG.info("Response: " + response.get());
             ObjectMapper mapper = new ObjectMapper();
             try {
                 List<HomeAssistantBaseEntity> entities = mapper.readValue(response.get(), new TypeReference<>() {
