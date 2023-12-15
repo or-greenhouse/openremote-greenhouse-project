@@ -30,6 +30,9 @@ import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.protocol.ProtocolAssetDiscovery;
 import org.openremote.model.syslog.SyslogCategory;
 
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -71,35 +74,21 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         });
 
         client = new HomeAssistantHttpClient(url, accessToken);
-        setConnectionStatus(ConnectionStatus.CONNECTING);
-
         if (client.isConnectionSuccessful()) {
             setConnectionStatus(ConnectionStatus.CONNECTED);
             LOG.info("Connection to HomeAssistant API successful");
 
             assetService = container.getService(ProtocolAssetService.class);
             executorService = container.getExecutorService();
-            webSocketClient = new HomeAssistantWebSocketClient(this);
+            webSocketClient = createWebSocketClient();
             entityProcessor = new HomeAssistantEntityProcessor(this, assetService);
 
             importAssets();
-            startWebSocketClient();
         } else {
             LOG.warning("Connection to HomeAssistant failed");
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
         }
 
-    }
-
-    // Starts the WebSocket client in a separate thread
-    // TODO: Improve this to also handle reconnects and change the connection status accordingly
-    private void startWebSocketClient() {
-        executorService.submit(() -> {
-            webSocketClient.connect();
-            while (running) {
-                Thread.onSpinWait();
-            }
-        }, null);
     }
 
     // Imports all entities from Home Assistant and merges them into the agents asset store
@@ -121,6 +110,10 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
     @Override
     protected void doStop(Container container) {
         running = false;
+        if (webSocketClient != null) {
+            webSocketClient.disconnect();
+        }
+
     }
 
     @Override
@@ -143,7 +136,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             updateLinkedAttribute(event.getAttributeState());
             return; // no change - just update the linked attribute and return
         }
-
 
         //TODO: Replace with command pattern implementation
         if (asset instanceof HomeAssistantLightAsset) {
@@ -195,5 +187,18 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             }
         }
         return null;
+    }
+
+
+
+    private HomeAssistantWebSocketClient createWebSocketClient()
+    {
+        if (getAgent().getHomeAssistantUrl().isEmpty()) {
+            throw new RuntimeException("Home Assistant URL is not defined so cannot create websocket client for protocol: " + this);
+        }
+        var wsUrlString = (getAgent().getHomeAssistantUrl().get() + "/api/websocket").replace("http", "ws");
+        var wsUrl = URI.create(wsUrlString);
+
+        return new HomeAssistantWebSocketClient(this, wsUrl);
     }
 }

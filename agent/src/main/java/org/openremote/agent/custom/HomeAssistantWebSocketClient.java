@@ -2,81 +2,68 @@ package org.openremote.agent.custom;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.websocket.*;
+import io.netty.channel.ChannelHandler;
 import org.openremote.agent.custom.entities.HomeAssistantEntityState;
+import org.openremote.agent.protocol.io.AbstractNettyIOClient;
+import org.openremote.agent.protocol.websocket.WebsocketIOClient;
+import org.openremote.model.asset.agent.ConnectionStatus;
 import org.openremote.model.syslog.SyslogCategory;
+import org.openremote.model.util.ValueUtil;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 
-@ClientEndpoint
-public class HomeAssistantWebSocketClient {
+public class HomeAssistantWebSocketClient extends WebsocketIOClient<String> {
 
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantHttpClient.class);
-    private final String webSocketEndpoint;
     private final HomeAssistantProtocol protocol;
-    private Session session;
 
-    public HomeAssistantWebSocketClient(HomeAssistantProtocol protocol) {
-        var homeAssistantUrl = protocol.getAgent().getHomeAssistantUrl().orElseThrow();
-        //this.webSocketEndpoint = homeAssistantUrl.replace("http", "ws") + "/api/websocket";
-        this.webSocketEndpoint = "ws://192.168.178.22:8123/api/websocket";
+    public HomeAssistantWebSocketClient(HomeAssistantProtocol protocol, URI homeAssistantWebSocketUrl) {
+        super(homeAssistantWebSocketUrl, null, null);
         this.protocol = protocol;
 
+        setEncoderDecoderProvider(() ->
+            new ChannelHandler[] {new AbstractNettyIOClient.MessageToMessageDecoder<>(String.class, this)}
+        );
+
+        addMessageConsumer(this::onExternalMessageReceived);
+        connect();
     }
 
-    public void connect() {
-        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-        try {
-            LOG.info("Connecting to Home Assistant WebSocket Endpoint: " + webSocketEndpoint);
-            session = container.connectToServer(this, URI.create(webSocketEndpoint));
-        } catch (Exception e) {
-            LOG.warning("Error establishing connection to Home Assistant WebSocket Endpoint: " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-        subscribeToEntityStateChanges();
-    }
 
-    public void sendMessage(String message) {
-        try {
-            session.getBasicRemote().sendText(message);
-        } catch (Exception e) {
-            LOG.warning("Error sending message to Home Assistant WebSocket Endpoint: " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    @OnOpen
-    private void onOpen(Session session) {
-        this.session = session;
-        LOG.info("Connected to Home Assistant WebSocket Endpoint");
-        try {
-            session.getBasicRemote().sendText("{\"type\": \"auth\",\"access_token\": \"" + this.protocol.getAgent().getAccessToken().orElse("") + "\"}");
-        } catch (Exception e) {
-            LOG.warning("Error sending authentication message to Home Assistant WebSocket Endpoint: " + e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    @OnError
-    private void onError(Throwable t) {
-        LOG.warning("Error occurred on Home Assistant WebSocket Endpoint: " + t.getMessage());
-    }
-
-    @OnMessage
-    private void onMessage(String message) {
+    private void onExternalMessageReceived(String message) {
+        LOG.info("Received message from Home Assistant WebSocket Endpoint: " + message);
         tryHandleEntityStateChange(message);
     }
+
+
+    @Override
+    protected void onConnectionStatusChanged(ConnectionStatus connectionStatus) {
+        super.onConnectionStatusChanged(connectionStatus);
+        LOG.info("Connection status changed to: " + connectionStatus);
+
+        if (connectionStatus == ConnectionStatus.CONNECTED) {
+            var authMessage = ValueUtil.asJSON(Map.of("type", "auth", "access_token", this.protocol.getAgent().getAccessToken().orElse("")));
+            if(authMessage.isPresent())
+            {
+                LOG.info("Sending auth message to Home Assistant WebSocket Endpoint: " + authMessage.get());
+                sendMessage(authMessage.get());
+                subscribeToEntityStateChanges();
+            }
+        }
+    }
+
 
     private void tryHandleEntityStateChange(String message) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             HomeAssistantEntityState event = mapper.readValue(message, HomeAssistantEntityState.class);
             protocol.entityProcessor.handleEntityStateEvent(event.getEvent());
-        } catch (JsonProcessingException e) {
-            LOG.warning("Error parsing message from Home Assistant WebSocket Endpoint: " + e.getMessage());
+        } catch (Exception e) {
+            // ignore - not an entity state change event
         }
     }
 
