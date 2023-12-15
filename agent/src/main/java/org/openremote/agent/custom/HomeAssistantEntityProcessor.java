@@ -29,7 +29,6 @@ import static org.openremote.model.value.MetaItemType.AGENT_LINK;
 public class HomeAssistantEntityProcessor {
 
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
-    private final List<String> SUPPORTED_ENTITY_TYPES = new ArrayList<>(List.of(ENTITY_TYPE_LIGHT, ENTITY_TYPE_SWITCH, ENTITY_TYPE_BINARY_SENSOR));
     public static final String ENTITY_TYPE_LIGHT = "light";
     public static final String ENTITY_TYPE_SWITCH = "switch";
     public static final String ENTITY_TYPE_BINARY_SENSOR = "binary_sensor";
@@ -50,7 +49,7 @@ public class HomeAssistantEntityProcessor {
         var entityId = event.getData().getEntityId();
         var entityTypeId = getEntityTypeFromEntityId(entityId);
 
-        if (!SUPPORTED_ENTITY_TYPES.contains(entityTypeId)) {
+        if (!entityCanBeImported(entityTypeId)) {
             return; // skip unsupported entity types
         }
 
@@ -77,7 +76,7 @@ public class HomeAssistantEntityProcessor {
             String entityId = entity.getEntityId();
             String entityType = getEntityTypeFromEntityId(entityId);
 
-            if (currentAssets.contains(entityId) || !SUPPORTED_ENTITY_TYPES.contains(entityType)) {
+            if (currentAssets.contains(entityId) || !entityCanBeImported(entityType)) {
                 continue; // skip unsupported entity types and already discovered assets
             }
 
@@ -85,7 +84,7 @@ public class HomeAssistantEntityProcessor {
             var friendlyName = (String) homeAssistantAttributes.get("friendly_name"); // friendly name always exists for all entities from the Home Assistant API
             Asset<?> asset = switch (entityType) {
                 case ENTITY_TYPE_LIGHT -> new HomeAssistantLightAsset(friendlyName, entityId);
-                case ENTITY_TYPE_BINARY_SENSOR -> new HomeAssistantSensorAsset(friendlyName, entityId);
+                case ENTITY_TYPE_BINARY_SENSOR, ENTITY_TYPE_SENSOR -> new HomeAssistantSensorAsset(friendlyName, entityId);
                 case ENTITY_TYPE_SWITCH -> new HomeAssistantSwitchAsset(friendlyName, entityId);
                 default -> new HomeAssistantBaseAsset(friendlyName, entityId);
             };
@@ -184,14 +183,24 @@ public class HomeAssistantEntityProcessor {
 
         return protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
                 .filter(asset -> asset.getAttributes().getValue("HomeAssistantEntityId").orElseThrow().toString().equals(homeAssistantEntityId)).findFirst().orElse(null);
-
-
     }
 
     // Retrieves the entity type from the given home assistant entity id (format <entity_type>.<entity_id>)
     private String getEntityTypeFromEntityId(String entityId) {
         String[] parts = entityId.split("\\.");
         return parts[0];
+    }
+
+    private boolean entityCanBeImported(String entityType) {
+
+        //split get imported entity types string by comma
+        //check if the entity type is in the list
+        var importedEntityTypes = protocol.getAgent().getImportedEntityTypes().orElse("").split(",");
+        for (String importedEntityType : importedEntityTypes) {
+            if (importedEntityType.equals(entityType))
+                return true;
+        }
+        return false;
     }
 
 }

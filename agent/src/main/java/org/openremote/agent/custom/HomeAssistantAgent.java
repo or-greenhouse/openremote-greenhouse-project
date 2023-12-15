@@ -23,7 +23,9 @@ import jakarta.persistence.Entity;
 import org.openremote.model.asset.Asset;
 import org.openremote.model.asset.agent.Agent;
 import org.openremote.model.asset.agent.AgentDescriptor;
+import org.openremote.model.attribute.MetaItem;
 import org.openremote.model.value.AttributeDescriptor;
+import org.openremote.model.value.MetaItemType;
 import org.openremote.model.value.ValueType;
 
 import java.util.Optional;
@@ -44,9 +46,11 @@ import java.util.Optional;
 @Entity
 public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> {
 
-    public static final AttributeDescriptor<String> ACCESS_TOKEN = new AttributeDescriptor<>("AccessToken", ValueType.TEXT);
+    public static final AttributeDescriptor<String> ACCESS_TOKEN = new AttributeDescriptor<>("AccessToken", ValueType.TEXT, new MetaItem<>(MetaItemType.SECRET));
 
     public static final AttributeDescriptor<String> HOME_ASSISTANT_URL = new AttributeDescriptor<>("HomeAssistantURL", ValueType.HTTP_URL);
+
+    public static final AttributeDescriptor<String> IMPORTED_ENTITY_TYPES = new AttributeDescriptor<>("ImportedEntityTypes", ValueType.TEXT).withUnits();
 
     public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> DESCRIPTOR = new AgentDescriptor<>(
             HomeAssistantAgent.class, HomeAssistantProtocol.class, HomeAssistantAgentLink.class
@@ -71,6 +75,12 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
     public Optional<String> getHomeAssistantUrl() {
         return getAttributes().getValue(HOME_ASSISTANT_URL);
     }
+
+    public Optional<String> getImportedEntityTypes() {
+        return getAttributes().getValue(IMPORTED_ENTITY_TYPES);
+    }
+
+
 
 }
 
