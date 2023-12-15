@@ -59,9 +59,8 @@ public class HomeAssistantWebSocketClient extends WebsocketIOClient<String> {
 
     private void tryHandleEntityStateChange(String message) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            HomeAssistantEntityState event = mapper.readValue(message, HomeAssistantEntityState.class);
-            protocol.entityProcessor.handleEntityStateEvent(event.getEvent());
+            var event = ValueUtil.parse(message, HomeAssistantEntityState.class);
+            event.ifPresent(homeAssistantEntityState -> protocol.entityProcessor.handleEntityStateEvent(homeAssistantEntityState.getEvent()));
         } catch (Exception e) {
             // ignore - not an entity state change event
         }
@@ -69,6 +68,11 @@ public class HomeAssistantWebSocketClient extends WebsocketIOClient<String> {
 
     // Subscribe to state changes for all entities within Home Assistant
     private void subscribeToEntityStateChanges() {
-        sendMessage("{\"id\": 1, \"type\": \"subscribe_events\", \"event_type\": \"state_changed\"}");
+        var subscribeMessage = ValueUtil.asJSON(Map.of("id", 1, "type", "subscribe_events", "event_type", "state_changed"));
+        if(subscribeMessage.isPresent())
+        {
+            LOG.info("Sending subscribe message to Home Assistant WebSocket Endpoint: " + subscribeMessage.get());
+            sendMessage(subscribeMessage.get());
+        }
     }
 }
