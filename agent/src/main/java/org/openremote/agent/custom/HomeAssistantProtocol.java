@@ -19,21 +19,23 @@
  */
 package org.openremote.agent.custom;
 
+import org.openremote.agent.custom.assets.HomeAssistantBaseAsset;
 import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
 import org.openremote.agent.custom.commands.EntityStateCommandFactory;
 import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.agent.protocol.ProtocolAssetService;
+import org.openremote.container.util.UniqueIdentifierGenerator;
 import org.openremote.model.Container;
 import org.openremote.model.asset.AssetTreeNode;
 import org.openremote.model.asset.agent.ConnectionStatus;
+import org.openremote.model.asset.impl.GroupAsset;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.protocol.ProtocolAssetDiscovery;
 import org.openremote.model.syslog.SyslogCategory;
 
 import java.net.URI;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -169,8 +171,24 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
                 //TODO: Remove assets that are no longer present in Home Assistant
                 //Pseudo: assetService.removeAssetsNotInList(assets.get());
 
+                // Key: Asset type name, Value: Parent (group asset) id
+                HashMap<String, String> assetTypeGroupIds = new HashMap<String, String>();
+
                 for (var asset : assets.get()) {
-                    asset.setParentId(agent.getId());
+                    String entityType = HomeAssistantEntityProcessor.getEntityTypeFromEntityId(asset.getEntityId());
+                    if (!assetTypeGroupIds.containsKey(entityType)) {
+                        GroupAsset groupAsset = new GroupAsset(entityType, HomeAssistantBaseAsset.class);
+
+                        groupAsset.setId(UniqueIdentifierGenerator.generateId());
+                        groupAsset.setParentId(agent.getId());
+                        groupAsset.setRealm(agent.getRealm());
+
+                        assetTypeGroupIds.put(entityType, groupAsset.getId());
+                        AssetTreeNode groupAssetNode = new AssetTreeNode(groupAsset);
+
+                        assetConsumer.accept(new AssetTreeNode[]{groupAssetNode});
+                    }
+                    asset.setParentId(assetTypeGroupIds.get(entityType));
                     asset.setRealm(agent.getRealm());
                     AssetTreeNode node = new AssetTreeNode(asset);
                     assetConsumer.accept(new AssetTreeNode[]{node});

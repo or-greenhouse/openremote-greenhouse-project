@@ -59,11 +59,11 @@ public class HomeAssistantEntityProcessor {
     }
 
     // Converts a list of Home Assistant entities to a list of OpenRemote assets
-    public Optional<List<Asset<?>>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
+    public Optional<List<HomeAssistantBaseAsset>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
                 .map(asset -> asset.getAttributes().getValue("HomeAssistantEntityId").orElseThrow().toString())
                 .toList();
-        List<Asset<?>> assets = new ArrayList<>();
+        List<HomeAssistantBaseAsset> assets = new ArrayList<>();
 
         for (HomeAssistantBaseEntity entity : entities) {
             Map<String, Object> homeAssistantAttributes = entity.getAttributes();
@@ -74,7 +74,7 @@ public class HomeAssistantEntityProcessor {
                 continue;
             }
 
-            Asset<?> asset = initiateAssetClass(homeAssistantAttributes, entityType, entityId);
+            HomeAssistantBaseAsset asset = initiateAssetClass(homeAssistantAttributes, entityType, entityId);
 
             handleStateConversion(entity, asset);
 
@@ -94,7 +94,7 @@ public class HomeAssistantEntityProcessor {
     }
 
     // Initiates the appropriate asset class based on the given entity type
-    private Asset<?> initiateAssetClass(Map<String, Object> homeAssistantAttributes, String entityType, String entityId) {
+    private HomeAssistantBaseAsset initiateAssetClass(Map<String, Object> homeAssistantAttributes, String entityType, String entityId) {
         var friendlyName = (String) homeAssistantAttributes.get("friendly_name");
         return switch (entityType) {
             case ENTITY_TYPE_LIGHT -> new HomeAssistantLightAsset(friendlyName, entityId);
