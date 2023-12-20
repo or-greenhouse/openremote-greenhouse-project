@@ -8,8 +8,7 @@ import org.openremote.model.attribute.Attribute;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.openremote.agent.custom.entities.HomeAssistantEntityType.ENTITY_TYPE_LIGHT;
-import static org.openremote.agent.custom.entities.HomeAssistantEntityType.ENTITY_TYPE_SWITCH;
+import static org.openremote.agent.custom.entities.HomeAssistantEntityType.*;
 
 public final class EntityStateCommandFactory {
 
@@ -26,7 +25,7 @@ public final class EntityStateCommandFactory {
 
         // currently the only entity types that actually need to handle state changes are lights and switches.
         return switch (entityType) {
-            case ENTITY_TYPE_LIGHT, ENTITY_TYPE_SWITCH -> {
+            case ENTITY_TYPE_LIGHT, ENTITY_TYPE_SWITCH, ENTITY_TYPE_FAN -> {
                 if (isStateAttribute) {
                     yield Optional.of(new EntityStateCommand("toggle", entityId, null, null));
                 }

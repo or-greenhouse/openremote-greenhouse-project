@@ -145,7 +145,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         updateLinkedAttribute(event.getAttributeState());
     }
 
-    // Called when an attribute is written to due to external changes
+    // Called when an attribute is written to due to external changes made by Home Assistant
     public void handleExternalAttributeChange(AttributeEvent event) {
         updateLinkedAttribute(event.getAttributeState());
     }

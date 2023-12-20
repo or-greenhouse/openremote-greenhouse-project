@@ -1,7 +1,5 @@
 package org.openremote.agent.custom;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandler;
 import org.openremote.agent.custom.entities.HomeAssistantEntityState;
 import org.openremote.agent.protocol.io.AbstractNettyIOClient;
@@ -35,7 +33,6 @@ public class HomeAssistantWebSocketClient extends WebsocketIOClient<String> {
 
 
     private void onExternalMessageReceived(String message) {
-        LOG.info("Received message from Home Assistant WebSocket Endpoint: " + message);
         tryHandleEntityStateChange(message);
     }
 
