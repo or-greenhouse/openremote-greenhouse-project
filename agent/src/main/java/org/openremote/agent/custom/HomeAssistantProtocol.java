@@ -177,6 +177,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
             if (assets.isPresent()) {
 
                 //TODO: Remove assets that are no longer present in Home Assistant
+                //Pseudo: assetService.removeAssetsNotInList(assets.get());
 
                 for (var asset : assets.get()) {
                     asset.setParentId(agent.getId());
