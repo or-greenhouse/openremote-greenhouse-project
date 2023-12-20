@@ -23,16 +23,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+import static org.openremote.agent.custom.entities.HomeAssistantEntityType.*;
 import static org.openremote.model.syslog.SyslogCategory.PROTOCOL;
 import static org.openremote.model.value.MetaItemType.AGENT_LINK;
 
 public class HomeAssistantEntityProcessor {
 
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
-    public static final String ENTITY_TYPE_LIGHT = "light";
-    public static final String ENTITY_TYPE_SWITCH = "switch";
-    public static final String ENTITY_TYPE_BINARY_SENSOR = "binary_sensor";
-    public static final String ENTITY_TYPE_SENSOR = "sensor";
+
 
     private final HomeAssistantProtocol protocol;
     private final ProtocolAssetService protocolAssetService;
@@ -197,7 +195,7 @@ public class HomeAssistantEntityProcessor {
     }
 
     // Retrieves the entity type from the given home assistant entity id (format <entity_type>.<entity_id>)
-    private String getEntityTypeFromEntityId(String entityId) {
+    public static String getEntityTypeFromEntityId(String entityId) {
         String[] parts = entityId.split("\\.");
         return parts[0];
     }

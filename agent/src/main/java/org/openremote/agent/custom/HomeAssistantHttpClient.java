@@ -3,14 +3,17 @@ package org.openremote.agent.custom;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.openremote.agent.custom.commands.EntityStateCommand;
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.model.syslog.SyslogCategory;
+import org.openremote.model.util.ValueUtil;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -50,15 +53,22 @@ public class HomeAssistantHttpClient {
         return response.isPresent();
     }
 
-    public void setEntityState(String domain, String service, String entity_id, String setting) {
+    public void setEntityState(String domain, EntityStateCommand command) {
+        LOG.info("Setting entity state: " + domain + "." + command.getService() + " " + command.getEntityId());
 
-        LOG.info("Setting entity state: " + domain + "." + service + " " + entity_id + " " + setting);
+        // default for setting the entity state
+        var json = ValueUtil.asJSON(Map.of("entity_id", command.getEntityId()));
 
-        if (setting.isBlank()) {
-            sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\"}");
-            return;
+        // if the attribute name is set, we are setting an attribute value.
+        if (command.getAttributeName() != null && !command.getAttributeName().isEmpty()) {
+            json = ValueUtil.asJSON(Map.of("entity_id", command.getEntityId(), command.getAttributeName(), command.getAttributeValue()));
         }
-        sendPostRequest("/api/services/" + domain + "/" + service, "{\"entity_id\": \"" + entity_id + "\", " + setting + "}");
+
+        if (json.isEmpty())
+            return;
+
+        sendPostRequest("/api/services/" + domain + "/" + command.getService(), json.get());
+
     }
 
     public void sendPostRequest(String path, String json) {

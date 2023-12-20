@@ -20,6 +20,7 @@
 package org.openremote.agent.custom;
 
 import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
+import org.openremote.agent.custom.commands.EntityStateCommandFactory;
 import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.model.Container;
@@ -113,43 +114,32 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         if (webSocketClient != null) {
             webSocketClient.disconnect();
         }
-
     }
 
     @Override
     protected void doLinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) throws RuntimeException {
-        //We don't need to do anything here
     }
 
     @Override
     protected void doUnlinkAttribute(String assetId, Attribute<?> attribute, HomeAssistantAgentLink agentLink) {
-        //We don't need to do anything here
     }
 
     @Override
     protected void doLinkedAttributeWrite(Attribute<?> attribute, HomeAssistantAgentLink agentLink, AttributeEvent event, Object processedValue) {
         var asset = assetService.findAsset(event.getAssetId());
         if (asset == null) {
-            return;
+            return; // asset not found
         }
         if (attribute.getValue().equals(processedValue)) {
             updateLinkedAttribute(event.getAttributeState());
-            return; // no change - just update the linked attribute and return
+            return; // no change
         }
 
-        //TODO: Replace with command pattern implementation
-        if (asset instanceof HomeAssistantLightAsset) {
-            LOG.info("Writing attribute: " + attribute.getName() + " with value: " + processedValue + " to Home Assistant");
-            String processedValueString = processedValue.toString();
-            if (attribute.getName().equals("state")) { // turn on/off light
-                var service = "toggle";
-                client.setEntityState(agentLink.domainId, service, agentLink.entityId, "");
-            } else {
-                var settingKey = attribute.getName();
-                client.setEntityState(agentLink.domainId, "turn_on", agentLink.entityId, "\"" + settingKey + "\": \"" + processedValueString + "\"");
-            }
-        }
+        var command = EntityStateCommandFactory.createEntityStateCommand(asset, attribute, processedValue.toString());
+        if (command.isEmpty())
+            return;
 
+        client.setEntityState(agentLink.domainId, command.get());
         updateLinkedAttribute(event.getAttributeState());
     }
 
