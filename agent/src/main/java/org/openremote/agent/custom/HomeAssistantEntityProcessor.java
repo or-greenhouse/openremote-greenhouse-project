@@ -96,7 +96,7 @@ public class HomeAssistantEntityProcessor {
     }
 
     // Initiates the appropriate asset class based on the given entity type
-    private static Asset<?> initiateAssetClass(Map<String, Object> homeAssistantAttributes, String entityType, String entityId) {
+    private Asset<?> initiateAssetClass(Map<String, Object> homeAssistantAttributes, String entityType, String entityId) {
         var friendlyName = (String) homeAssistantAttributes.get("friendly_name");
         return switch (entityType) {
             case ENTITY_TYPE_LIGHT -> new HomeAssistantLightAsset(friendlyName, entityId);
@@ -108,7 +108,7 @@ public class HomeAssistantEntityProcessor {
 
 
     // Handles the conversion of Home Assistant attributes to OpenRemote attributes
-    private static void handleAttributeConversion(Map.Entry<String, Object> entry, Asset<?> asset) {
+    private void handleAttributeConversion(Map.Entry<String, Object> entry, Asset<?> asset) {
         LOG.info("Processing attribute: " + entry.getKey() + " with value: " + entry.getValue());
         var attributeValue = entry.getValue();
         var attributeKey = entry.getKey();
@@ -141,7 +141,7 @@ public class HomeAssistantEntityProcessor {
     }
 
     // Handles the conversion of Home Assistant state to OpenRemote state
-    private static void handleStateConversion(HomeAssistantBaseEntity entity, Asset<?> asset) {
+    private void handleStateConversion(HomeAssistantBaseEntity entity, Asset<?> asset) {
         var assetState = entity.getState();
         if (assetState.equals("on") || assetState.equals("off") || assetState.equals("true") || assetState.equals("false")) {
             Attribute<Boolean> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>("state", ValueType.BOOLEAN));
