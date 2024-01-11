@@ -9,7 +9,7 @@ import org.openremote.model.value.ValueType;
 @Entity
 public class HomeAssistantSensorAsset extends HomeAssistantBaseAsset {
 
-    public static final AssetDescriptor<HomeAssistantSensorAsset> DESCRIPTOR = new AssetDescriptor<>("motion-sensor", "2386f0", HomeAssistantSensorAsset.class);
+    public static final AssetDescriptor<HomeAssistantSensorAsset> DESCRIPTOR = new AssetDescriptor<>("numeric", "2386f0", HomeAssistantSensorAsset.class);
 
     protected HomeAssistantSensorAsset() {
     }

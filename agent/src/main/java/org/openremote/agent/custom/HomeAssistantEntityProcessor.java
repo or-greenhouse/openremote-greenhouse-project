@@ -1,9 +1,6 @@
 package org.openremote.agent.custom;
 
-import org.openremote.agent.custom.assets.HomeAssistantBaseAsset;
-import org.openremote.agent.custom.assets.HomeAssistantLightAsset;
-import org.openremote.agent.custom.assets.HomeAssistantSensorAsset;
-import org.openremote.agent.custom.assets.HomeAssistantSwitchAsset;
+import org.openremote.agent.custom.assets.*;
 import org.openremote.agent.custom.entities.HomeAssistantBaseEntity;
 import org.openremote.agent.custom.entities.HomeAssistantEntityStateEvent;
 import org.openremote.agent.protocol.ProtocolAssetService;
@@ -98,7 +95,8 @@ public class HomeAssistantEntityProcessor {
         var friendlyName = (String) homeAssistantAttributes.get("friendly_name");
         return switch (entityType) {
             case ENTITY_TYPE_LIGHT -> new HomeAssistantLightAsset(friendlyName, entityId);
-            case ENTITY_TYPE_BINARY_SENSOR, ENTITY_TYPE_SENSOR -> new HomeAssistantSensorAsset(friendlyName, entityId);
+            case ENTITY_TYPE_BINARY_SENSOR -> new HomeAssistantBinarySensorAsset(friendlyName, entityId);
+            case ENTITY_TYPE_SENSOR -> new HomeAssistantSensorAsset(friendlyName, entityId);
             case ENTITY_TYPE_SWITCH -> new HomeAssistantSwitchAsset(friendlyName, entityId);
             default -> new HomeAssistantBaseAsset(friendlyName, entityId);
         };
@@ -173,7 +171,8 @@ public class HomeAssistantEntityProcessor {
                 boolean value = event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true");
                 attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), value);
                 protocol.handleExternalAttributeChange(attributeEvent);
-            } else if (isAttributeAssignableFrom(stateAttribute.get(), String.class)) {
+            }
+            else if (isAttributeAssignableFrom(stateAttribute.get(), String.class)) {
                 Attribute<String> attribute = (Attribute<String>) stateAttribute.get();
                 attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), event.getData().getNewBaseEntity().getState());
                 protocol.handleExternalAttributeChange(attributeEvent);
