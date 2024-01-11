@@ -91,7 +91,7 @@ public class HomeAssistantEntityProcessor {
     }
 
     // Initiates the appropriate asset class based on the given entity type
-    private HomeAssistantBaseAsset initiateAssetClass(Map<String, Object> homeAssistantAttributes, String entityType, String entityId) {
+    HomeAssistantBaseAsset initiateAssetClass(Map<String, Object> homeAssistantAttributes, String entityType, String entityId) {
         var friendlyName = (String) homeAssistantAttributes.get("friendly_name");
         return switch (entityType) {
             case ENTITY_TYPE_LIGHT -> new HomeAssistantLightAsset(friendlyName, entityId);

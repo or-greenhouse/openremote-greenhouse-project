@@ -177,7 +177,10 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
                 for (var asset : assets.get()) {
                     String entityType = HomeAssistantEntityProcessor.getEntityTypeFromEntityId(asset.getEntityId());
                     if (!assetTypeGroupIds.containsKey(entityType)) {
-                        GroupAsset groupAsset = new GroupAsset(entityType, HomeAssistantBaseAsset.class);
+                        Map<String, Object> nameMap = new HashMap<>();
+                        nameMap.put("friendly_name", entityType);
+                        HomeAssistantBaseAsset groupAsset = entityProcessor.initiateAssetClass(nameMap, entityType, UniqueIdentifierGenerator.generateId());
+                        // GroupAsset groupAsset = new GroupAsset(entityType, HomeAssistantBaseAsset.class);
 
                         groupAsset.setId(UniqueIdentifierGenerator.generateId());
                         groupAsset.setParentId(agent.getId());
