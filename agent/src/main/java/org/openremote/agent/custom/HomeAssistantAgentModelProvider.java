@@ -37,29 +37,4 @@ public class HomeAssistantAgentModelProvider implements AssetModelProvider {
         return true;
     }
 
-    @Override
-    public AssetDescriptor<?>[] getAssetDescriptors() {
-        return new AssetDescriptor<?>[0];
-    }
-
-    @Override
-    public Map<Class<? extends Asset<?>>, List<AttributeDescriptor<?>>> getAttributeDescriptors() {
-        return null;
-    }
-
-    @Override
-    public Map<Class<? extends Asset<?>>, List<MetaItemDescriptor<?>>> getMetaItemDescriptors() {
-        return null;
-    }
-
-    @Override
-    public Map<Class<? extends Asset<?>>, List<ValueDescriptor<?>>> getValueDescriptors() {
-        return null;
-    }
-
-    @Override
-    public void onAssetModelFinished() {
-
-
-    }
 }

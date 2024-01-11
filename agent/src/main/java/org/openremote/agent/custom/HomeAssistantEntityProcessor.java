@@ -58,7 +58,7 @@ public class HomeAssistantEntityProcessor {
     // Converts a list of Home Assistant entities to a list of OpenRemote assets
     public Optional<List<HomeAssistantBaseAsset>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
-                .map(asset -> asset.getAttributes().getValue("HomeAssistantEntityId").orElseThrow().toString())
+                .map(asset -> asset.getAttributes().get("HomeAssistantEntityId").orElseThrow().toString())
                 .toList();
         List<HomeAssistantBaseAsset> assets = new ArrayList<>();
 
@@ -167,13 +167,13 @@ public class HomeAssistantEntityProcessor {
         if (stateAttribute.isPresent()) {
             AttributeEvent attributeEvent;
             if (isAttributeAssignableFrom(stateAttribute.get(), Boolean.class)) {
-                Attribute<Boolean> attribute = (Attribute<Boolean>) stateAttribute.get();
+                Attribute<Object> attribute = stateAttribute.get();
                 boolean value = event.getData().getNewBaseEntity().getState().equals("on") || event.getData().getNewBaseEntity().getState().equals("true");
                 attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), value);
                 protocol.handleExternalAttributeChange(attributeEvent);
             }
             else if (isAttributeAssignableFrom(stateAttribute.get(), String.class)) {
-                Attribute<String> attribute = (Attribute<String>) stateAttribute.get();
+                Attribute<Object> attribute = stateAttribute.get();
                 attributeEvent = new AttributeEvent(asset.getId(), attribute.getName(), event.getData().getNewBaseEntity().getState());
                 protocol.handleExternalAttributeChange(attributeEvent);
             }
@@ -190,7 +190,7 @@ public class HomeAssistantEntityProcessor {
     private Asset<?> findAssetByEntityId(String homeAssistantEntityId) {
 
         return protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
-                .filter(asset -> asset.getAttributes().getValue("HomeAssistantEntityId").orElseThrow().toString().equals(homeAssistantEntityId)).findFirst().orElse(null);
+                .filter(asset -> asset.getAttributes().get("HomeAssistantEntityId").orElseThrow().toString().equals(homeAssistantEntityId)).findFirst().orElse(null);
     }
 
     // Retrieves the entity type from the given home assistant entity id (format <entity_type>.<entity_id>)
