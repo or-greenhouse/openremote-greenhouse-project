@@ -44,7 +44,7 @@ public class HomeAssistantEntityProcessor {
         var entityId = event.getData().getEntityId();
         var entityTypeId = getEntityTypeFromEntityId(entityId);
 
-        if (entityCanBeImported(entityTypeId)) {
+        if (entityCanBeSkipped(entityTypeId)) {
             return;
         }
 
@@ -67,7 +67,7 @@ public class HomeAssistantEntityProcessor {
             String entityId = entity.getEntityId();
             String entityType = getEntityTypeFromEntityId(entityId);
 
-            if (currentAssets.contains(entityId) || entityCanBeImported(entityType)) {
+            if (currentAssets.contains(entityId) || entityCanBeSkipped(entityType)) {
                 continue;
             }
 
@@ -199,7 +199,7 @@ public class HomeAssistantEntityProcessor {
         return parts[0];
     }
 
-    private boolean entityCanBeImported(String entityType) {
+    private boolean entityCanBeSkipped(String entityType) {
         //split get imported entity types string by comma
         //check if the entity type is in the list
         var importedEntityTypes = protocol.getAgent().getImportedEntityTypes().orElse("").split(",");
