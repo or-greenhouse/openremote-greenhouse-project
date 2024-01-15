@@ -60,6 +60,9 @@ public class HomeAssistantEntityProcessor {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
                 .map(asset -> asset.getAttributes().get("HomeAssistantEntityId").orElseThrow().toString())
                 .toList();
+
+
+
         List<HomeAssistantBaseAsset> assets = new ArrayList<>();
 
         for (HomeAssistantBaseEntity entity : entities) {
