@@ -14,10 +14,7 @@ import org.openremote.model.syslog.SyslogCategory;
 import org.openremote.model.value.AttributeDescriptor;
 import org.openremote.model.value.ValueType;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.logging.Logger;
 
 import static org.openremote.agent.custom.entities.HomeAssistantEntityType.*;
@@ -205,12 +202,17 @@ public class HomeAssistantEntityProcessor {
     private boolean entityCanBeSkipped(String entityType) {
         //split get imported entity types string by comma
         //check if the entity type is in the list
-        var importedEntityTypes = protocol.getAgent().getImportedEntityTypes().orElse("").split(",");
+        List<String> importedEntityTypes = Arrays.stream(protocol.getAgent().getImportedOtherEntityTypes().orElse("").split(",")).toList();
+
+        protocol.getAgent().getImportedLight().ifPresent(bool -> { if (bool) importedEntityTypes.add("light"); });
+        protocol.getAgent().getImportedSensor().ifPresent(bool -> { if (bool) importedEntityTypes.add("sensor"); });
+        protocol.getAgent().getImportedBinarySensor().ifPresent(bool -> { if (bool) importedEntityTypes.add("binary_sensor"); });
+        protocol.getAgent().getImportedSwitch().ifPresent(bool -> { if (bool) importedEntityTypes.add("switch"); });
         for (String importedEntityType : importedEntityTypes) {
             if (importedEntityType.equals(entityType))
-                return false;
+                return true;
         }
-        return true;
+        return false;
     }
 
 }

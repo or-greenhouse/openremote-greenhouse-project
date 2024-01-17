@@ -50,17 +50,24 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
 
     public static final AttributeDescriptor<String> HOME_ASSISTANT_URL = new AttributeDescriptor<>("HomeAssistantURL", ValueType.HTTP_URL);
 
-    public static final AttributeDescriptor<String> IMPORTED_ENTITY_TYPES = new AttributeDescriptor<>("ImportedEntityTypes", ValueType.TEXT);
+    public static final AttributeDescriptor<Boolean> IMPORTED_LIGHT = new AttributeDescriptor<>("ImportedLight", ValueType.BOOLEAN);
+    public static final AttributeDescriptor<Boolean> IMPORTED_SENSOR = new AttributeDescriptor<>("ImportedSensor", ValueType.BOOLEAN);
+    public static final AttributeDescriptor<Boolean> IMPORTED_BINARY_SENSOR = new AttributeDescriptor<>("ImportedBinarySensor", ValueType.BOOLEAN);
+    public static final AttributeDescriptor<Boolean> IMPORTED_SWITCH = new AttributeDescriptor<>("ImportedSwitch", ValueType.BOOLEAN);
+
+    public static final AttributeDescriptor<String> IMPORTED_OTHER_ENTITY_TYPES = new AttributeDescriptor<>("ImportedOtherEntityTypes", ValueType.TEXT);
 
     public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> DESCRIPTOR = new AgentDescriptor<>(
             HomeAssistantAgent.class, HomeAssistantProtocol.class, HomeAssistantAgentLink.class
     );
 
     protected HomeAssistantAgent() {
+        getAttributes().setValue(IMPORTED_OTHER_ENTITY_TYPES, "automation,button,camera,media_player,number,persistent_notification,select,update,zone");
     }
 
     public HomeAssistantAgent(String name) {
         super(name);
+        getAttributes().setValue(IMPORTED_OTHER_ENTITY_TYPES, "automation,button,camera,media_player,number,persistent_notification,select,update,zone");
     }
 
     @Override
@@ -76,8 +83,25 @@ public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantP
         return getAttributes().getValue(HOME_ASSISTANT_URL);
     }
 
-    public Optional<String> getImportedEntityTypes() {
-        return getAttributes().getValue(IMPORTED_ENTITY_TYPES);
+    public Optional<Boolean> getImportedLight() {
+        return getAttributes().getValue(IMPORTED_LIGHT);
+    }
+    public Optional<Boolean> getImportedSensor() {
+        return getAttributes().getValue(IMPORTED_SENSOR);
+    }
+    public Optional<Boolean> getImportedBinarySensor() {
+        return getAttributes().getValue(IMPORTED_BINARY_SENSOR);
+    }
+    public Optional<Boolean> getImportedSwitch() {
+        return getAttributes().getValue(IMPORTED_SWITCH);
+    }
+
+    public Optional<String> getImportedOtherEntityTypes() {
+        return getAttributes().getValue(IMPORTED_OTHER_ENTITY_TYPES);
+    }
+
+    public void setImportedEntityTypes(String value) {
+        getAttributes().setValue(IMPORTED_OTHER_ENTITY_TYPES, value);
     }
 
 
