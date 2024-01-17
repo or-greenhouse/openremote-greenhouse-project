@@ -167,11 +167,6 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         if (entities.isPresent()) {
             var assets = entityProcessor.convertEntitiesToAssets(entities.get());
             if (assets.isPresent()) {
-
-                //TODO: Remove assets that are no longer present in Home Assistant
-                //Pseudo: assetService.removeAssetsNotInList(assets.get());
-
-                // Key: Asset type name, Value: Parent (group asset) id
                 HashMap<String, String> assetTypeGroupIds = new HashMap<String, String>();
 
                 for (var asset : assets.get()) {
@@ -180,9 +175,8 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
                         Map<String, Object> nameMap = new HashMap<>();
                         nameMap.put("friendly_name", entityType);
                         HomeAssistantBaseAsset groupAsset = entityProcessor.initiateAssetClass(nameMap, entityType, UniqueIdentifierGenerator.generateId());
-                        // GroupAsset groupAsset = new GroupAsset(entityType, HomeAssistantBaseAsset.class);
-
                         groupAsset.setId(UniqueIdentifierGenerator.generateId());
+                        groupAsset.setIsGroup(true);
                         groupAsset.setParentId(agent.getId());
                         groupAsset.setRealm(agent.getRealm());
 
@@ -191,6 +185,7 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
 
                         assetConsumer.accept(new AssetTreeNode[]{groupAssetNode});
                     }
+
                     asset.setParentId(assetTypeGroupIds.get(entityType));
                     asset.setRealm(agent.getRealm());
                     AssetTreeNode node = new AssetTreeNode(asset);

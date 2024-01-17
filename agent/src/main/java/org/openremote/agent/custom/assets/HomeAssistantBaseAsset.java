@@ -13,7 +13,9 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
 
     public static AssetDescriptor<HomeAssistantBaseAsset> DESCRIPTOR = new AssetDescriptor<>("cube-outline", "03a6f0", HomeAssistantBaseAsset.class);
 
-    public static final AttributeDescriptor<String> ENTITY_ID = new AttributeDescriptor<>("HomeAssistantEntityId", ValueType.TEXT, new MetaItem<>(MetaItemType.READ_ONLY));
+    public static final AttributeDescriptor<String> ENTITY_ID = new AttributeDescriptor<>("HomeAssistantEntityId", ValueType.TEXT, new MetaItem<>(MetaItemType.SECRET));
+
+    public static final AttributeDescriptor<Boolean> IS_GROUP = new AttributeDescriptor<>("IsGroup", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.SECRET));
 
     protected HomeAssistantBaseAsset() {
     }
@@ -22,6 +24,14 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
         super(name);
         setEntityId(entityId);
 
+    }
+
+    public Boolean getIsGroup() {
+        return getAttributes().getValue(IS_GROUP).orElseThrow();
+    }
+
+    public void setIsGroup(Boolean isGroup) {
+        getAttributes().setValue(IS_GROUP, isGroup);
     }
 
     public String getEntityId() {

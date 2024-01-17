@@ -53,7 +53,7 @@ public class HomeAssistantEntityProcessor {
     // Converts a list of Home Assistant entities to a list of OpenRemote assets
     public Optional<List<HomeAssistantBaseAsset>> convertEntitiesToAssets(List<HomeAssistantBaseEntity> entities) {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
-                .map(asset -> asset.getAttributes().get("HomeAssistantEntityId").orElseThrow().toString())
+                .map(asset -> asset.getAttributes().get("HomeAssistantEntityId").orElseThrow().getValue().get().toString())
                 .toList();
 
         List<HomeAssistantBaseAsset> assets = new ArrayList<>();
@@ -113,11 +113,11 @@ public class HomeAssistantEntityProcessor {
             return;
 
         if (attributeValue instanceof Integer) {
-            Attribute<Integer> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.POSITIVE_INTEGER));
+            Attribute<Integer> attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>(attributeKey, ValueType.INTEGER));
             attribute.setValue((Integer) attributeValue);
 
             if (attributeKey.equals("off_brightness")) { //
-                attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>("brightness", ValueType.POSITIVE_INTEGER));
+                attribute = asset.getAttributes().getOrCreate(new AttributeDescriptor<>("brightness", ValueType.INTEGER));
                 attribute.setValue((Integer) attributeValue);
             }
             return; // skip the rest of the checks
