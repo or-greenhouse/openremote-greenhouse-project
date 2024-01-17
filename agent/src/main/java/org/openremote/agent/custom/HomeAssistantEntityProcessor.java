@@ -24,8 +24,6 @@ import static org.openremote.model.value.MetaItemType.AGENT_LINK;
 public class HomeAssistantEntityProcessor {
 
     private static final Logger LOG = SyslogCategory.getLogger(PROTOCOL, HomeAssistantProtocol.class);
-
-
     private final HomeAssistantProtocol protocol;
     private final ProtocolAssetService protocolAssetService;
     private final String agentId;
@@ -57,8 +55,6 @@ public class HomeAssistantEntityProcessor {
         List<String> currentAssets = protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
                 .map(asset -> asset.getAttributes().get("HomeAssistantEntityId").orElseThrow().toString())
                 .toList();
-
-
 
         List<HomeAssistantBaseAsset> assets = new ArrayList<>();
 
@@ -201,18 +197,26 @@ public class HomeAssistantEntityProcessor {
 
     private boolean entityCanBeSkipped(String entityType) {
         //split get imported entity types string by comma
-        //check if the entity type is in the list
-        List<String> importedEntityTypes = Arrays.stream(protocol.getAgent().getImportedOtherEntityTypes().orElse("").split(",")).toList();
+        List<String> importedEntityTypes = new ArrayList<>(Arrays.stream(protocol.getAgent().getImportedOtherEntityTypes().orElse("").split(",")).toList());
 
-        protocol.getAgent().getImportedLight().ifPresent(bool -> { if (bool) importedEntityTypes.add("light"); });
-        protocol.getAgent().getImportedSensor().ifPresent(bool -> { if (bool) importedEntityTypes.add("sensor"); });
-        protocol.getAgent().getImportedBinarySensor().ifPresent(bool -> { if (bool) importedEntityTypes.add("binary_sensor"); });
-        protocol.getAgent().getImportedSwitch().ifPresent(bool -> { if (bool) importedEntityTypes.add("switch"); });
+        protocol.getAgent().getImportedLight().ifPresent(bool -> {
+            if (bool) importedEntityTypes.add("light");
+        });
+        protocol.getAgent().getImportedSensor().ifPresent(bool -> {
+            if (bool) importedEntityTypes.add("sensor");
+        });
+        protocol.getAgent().getImportedBinarySensor().ifPresent(bool -> {
+            if (bool) importedEntityTypes.add("binary_sensor");
+        });
+        protocol.getAgent().getImportedSwitch().ifPresent(bool -> {
+            if (bool) importedEntityTypes.add("switch");
+        });
         for (String importedEntityType : importedEntityTypes) {
             if (importedEntityType.equals(entityType))
-                return true;
+                return false;
         }
-        return false;
+
+        return true;
     }
 
 }
