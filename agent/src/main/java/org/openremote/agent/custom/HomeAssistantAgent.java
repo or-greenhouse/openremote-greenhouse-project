@@ -47,15 +47,12 @@ import java.util.Optional;
 public class HomeAssistantAgent extends Agent<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> {
 
     public static final AttributeDescriptor<String> ACCESS_TOKEN = new AttributeDescriptor<>("AccessToken", ValueType.TEXT, new MetaItem<>(MetaItemType.SECRET));
-
     public static final AttributeDescriptor<String> HOME_ASSISTANT_URL = new AttributeDescriptor<>("HomeAssistantURL", ValueType.HTTP_URL);
-
-    public static final AttributeDescriptor<Boolean> IMPORTED_LIGHT = new AttributeDescriptor<>("ImportedLight", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Lights"));
-    public static final AttributeDescriptor<Boolean> IMPORTED_SENSOR = new AttributeDescriptor<>("ImportedSensor", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Sensors"));
-    public static final AttributeDescriptor<Boolean> IMPORTED_BINARY_SENSOR = new AttributeDescriptor<>("ImportedBinarySensor", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Binary Sensors"));
-    public static final AttributeDescriptor<Boolean> IMPORTED_SWITCH = new AttributeDescriptor<>("ImportedSwitch", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Switches"));
-
-    public static final AttributeDescriptor<String> IMPORTED_OTHER_ENTITY_TYPES = new AttributeDescriptor<>("ImportedOtherEntityTypes", ValueType.TEXT, new MetaItem<>(MetaItemType.LABEL, "Import Other Entity Types"));
+    public static final AttributeDescriptor<Boolean> IMPORTED_LIGHT = new AttributeDescriptor<>("ImportLights", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Lights"));
+    public static final AttributeDescriptor<Boolean> IMPORTED_SENSOR = new AttributeDescriptor<>("ImportSensors", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Sensors"));
+    public static final AttributeDescriptor<Boolean> IMPORTED_BINARY_SENSOR = new AttributeDescriptor<>("ImportBinarySensors", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Binary Sensors"));
+    public static final AttributeDescriptor<Boolean> IMPORTED_SWITCH = new AttributeDescriptor<>("ImportSwitches", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.LABEL, "Import Switches"));
+    public static final AttributeDescriptor<String> IMPORTED_OTHER_ENTITY_TYPES = new AttributeDescriptor<>("ImportOthers", ValueType.TEXT, new MetaItem<>(MetaItemType.LABEL, "Import Other Entity Types"));
 
     public static final AgentDescriptor<HomeAssistantAgent, HomeAssistantProtocol, HomeAssistantAgentLink> DESCRIPTOR = new AgentDescriptor<>(
             HomeAssistantAgent.class, HomeAssistantProtocol.class, HomeAssistantAgentLink.class
