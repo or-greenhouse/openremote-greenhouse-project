@@ -13,9 +13,11 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
 
     public static AssetDescriptor<HomeAssistantBaseAsset> DESCRIPTOR = new AssetDescriptor<>("cube-outline", "03a6f0", HomeAssistantBaseAsset.class);
 
-    public static final AttributeDescriptor<String> ENTITY_ID = new AttributeDescriptor<>("HomeAssistantEntityId", ValueType.TEXT, new MetaItem<>(MetaItemType.SECRET));
+    public static final AttributeDescriptor<String> ENTITY_ID = new AttributeDescriptor<>("HomeAssistantEntityId", ValueType.TEXT, new MetaItem<>(MetaItemType.READ_ONLY));
 
-    public static final AttributeDescriptor<Boolean> IS_GROUP = new AttributeDescriptor<>("IsGroup", ValueType.BOOLEAN, new MetaItem<>(MetaItemType.SECRET));
+    public static final AttributeDescriptor<String> AGENT_ID = new AttributeDescriptor<>("AgentId", ValueType.TEXT, new MetaItem<>(MetaItemType.READ_ONLY));
+
+    public static final AttributeDescriptor<String> GROUP_FOR_ENTITY_TYPE = new AttributeDescriptor<>("GroupForEntityType", ValueType.TEXT, new MetaItem<>(MetaItemType.READ_ONLY));
 
     protected HomeAssistantBaseAsset() {
     }
@@ -26,12 +28,20 @@ public class HomeAssistantBaseAsset extends Asset<HomeAssistantBaseAsset> {
 
     }
 
-    public Boolean getIsGroup() {
-        return getAttributes().getValue(IS_GROUP).orElseThrow();
+    public String getAgentId() {
+        return getAttributes().getValue(AGENT_ID).orElseThrow();
     }
 
-    public void setIsGroup(Boolean isGroup) {
-        getAttributes().setValue(IS_GROUP, isGroup);
+    public void setAgentId(String agentId) {
+        getAttributes().setValue(AGENT_ID, agentId);
+    }
+
+    public String getGroupForEntityType() {
+        return getAttributes().getValue(GROUP_FOR_ENTITY_TYPE).orElseThrow();
+    }
+
+    public void setGroupForEntityType(String groupForEntityType) {
+        getAttributes().setValue(GROUP_FOR_ENTITY_TYPE, groupForEntityType);
     }
 
     public String getEntityId() {

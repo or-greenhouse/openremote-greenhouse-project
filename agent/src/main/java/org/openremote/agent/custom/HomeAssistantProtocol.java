@@ -26,12 +26,14 @@ import org.openremote.agent.protocol.AbstractProtocol;
 import org.openremote.agent.protocol.ProtocolAssetService;
 import org.openremote.container.util.UniqueIdentifierGenerator;
 import org.openremote.model.Container;
+import org.openremote.model.asset.Asset;
 import org.openremote.model.asset.AssetTreeNode;
 import org.openremote.model.asset.agent.ConnectionStatus;
 import org.openremote.model.asset.impl.GroupAsset;
 import org.openremote.model.attribute.Attribute;
 import org.openremote.model.attribute.AttributeEvent;
 import org.openremote.model.protocol.ProtocolAssetDiscovery;
+import org.openremote.model.query.AssetQuery;
 import org.openremote.model.syslog.SyslogCategory;
 
 import java.net.URI;
@@ -167,33 +169,43 @@ public class HomeAssistantProtocol extends AbstractProtocol<HomeAssistantAgent, 
         if (entities.isPresent()) {
             var assets = entityProcessor.convertEntitiesToAssets(entities.get());
             if (assets.isPresent()) {
-                HashMap<String, String> assetTypeGroupIds = new HashMap<String, String>();
-
                 for (var asset : assets.get()) {
                     String entityType = HomeAssistantEntityProcessor.getEntityTypeFromEntityId(asset.getEntityId());
-                    if (!assetTypeGroupIds.containsKey(entityType)) {
-                        Map<String, Object> nameMap = new HashMap<>();
-                        nameMap.put("friendly_name", entityType);
-                        HomeAssistantBaseAsset groupAsset = entityProcessor.initiateAssetClass(nameMap, entityType, UniqueIdentifierGenerator.generateId());
-                        groupAsset.setId(UniqueIdentifierGenerator.generateId());
-                        groupAsset.setIsGroup(true);
-                        groupAsset.setParentId(agent.getId());
-                        groupAsset.setRealm(agent.getRealm());
+                    var parent = getOrCreateParentAsset(assetConsumer, entityType, asset);
+                    if (parent.isEmpty())
+                        continue;
 
-                        assetTypeGroupIds.put(entityType, groupAsset.getId());
-                        AssetTreeNode groupAssetNode = new AssetTreeNode(groupAsset);
-
-                        assetConsumer.accept(new AssetTreeNode[]{groupAssetNode});
-                    }
-
-                    asset.setParentId(assetTypeGroupIds.get(entityType));
+                    asset.setParent(parent.get());
                     asset.setRealm(agent.getRealm());
-                    AssetTreeNode node = new AssetTreeNode(asset);
-                    assetConsumer.accept(new AssetTreeNode[]{node});
+                    assetService.mergeAsset(asset);
                 }
             }
         }
         return null;
+    }
+
+    public Optional<Asset<?>> getOrCreateParentAsset(Consumer<AssetTreeNode[]> consumer, String entityType, HomeAssistantBaseAsset asset)
+    {
+        //find the parent asset based on the entity type (group for entity type attribute) and the parent of the parent has to be the agentId
+        HomeAssistantBaseAsset parentAsset = (HomeAssistantBaseAsset) assetService.findAssets(agent.getId(), new AssetQuery().attributeName("GroupForEntityType")).stream()
+                .filter(a -> a.getAttributes().get("GroupForEntityType").orElseThrow().getValue().flatMap(v -> v.equals(entityType) ? Optional.of(v) : Optional.empty()).isPresent())
+                .findFirst().orElse(null);
+
+
+        if(parentAsset == null)
+        {
+            parentAsset = entityProcessor.initiateAssetClass(Map.of("friendly_name", entityType), entityType, asset.getEntityId());
+            parentAsset.setParentId(agent.getId());
+            parentAsset.setRealm(agent.getRealm());
+            parentAsset.setAgentId(agent.getId());
+            parentAsset.setGroupForEntityType(entityType);
+            parentAsset.setId(UniqueIdentifierGenerator.generateId());
+
+            AssetTreeNode node = new AssetTreeNode(parentAsset);
+            consumer.accept(new AssetTreeNode[]{node});
+            //parentAsset = assetService.findAsset(parentAsset.getId()); // get the asset back from the asset service to ensure it has been persisted
+        }
+        return Optional.of(parentAsset);
     }
 
 
