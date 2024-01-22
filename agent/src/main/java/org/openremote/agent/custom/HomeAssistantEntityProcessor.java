@@ -38,7 +38,6 @@ public class HomeAssistantEntityProcessor {
     public void handleEntityStateEvent(HomeAssistantEntityStateEvent event) {
         var entityId = event.getData().getEntityId();
         var entityTypeId = getEntityTypeFromEntityId(entityId);
-
         if (entityCanBeSkipped(entityTypeId)) {
             return;
         }
@@ -148,6 +147,8 @@ public class HomeAssistantEntityProcessor {
     @SuppressWarnings("unchecked") // suppress unchecked cast warnings for attribute.get() calls
     private void processEntityStateEvent(Asset<?> asset, HomeAssistantEntityStateEvent event) {
 
+        LOG.info("Processing entity state event for asset: " + asset.getName() + " with value: " + event.getData().getNewBaseEntity().getState());
+
         for (Map.Entry<String, Object> eventAttribute : event.getData().getNewBaseEntity().getAttributes().entrySet()) {
             var assetAttribute = asset.getAttributes().get(eventAttribute.getKey());
             if (assetAttribute.isEmpty())
@@ -184,9 +185,9 @@ public class HomeAssistantEntityProcessor {
 
     // Retrieves the appropriate asset based on the given home assistant entity id
     private Asset<?> findAssetByEntityId(String homeAssistantEntityId) {
-
         return protocolAssetService.findAssets(agentId, new AssetQuery().attributeName("HomeAssistantEntityId")).stream()
-                .filter(asset -> asset.getAttributes().get("HomeAssistantEntityId").orElseThrow().toString().equals(homeAssistantEntityId)).findFirst().orElse(null);
+                .filter(a -> a.getAttributes().get("HomeAssistantEntityId").orElseThrow().getValue().flatMap(v -> v.equals(homeAssistantEntityId) ? Optional.of(v) : Optional.empty()).isPresent())
+                .findFirst().orElse(null);
     }
 
     // Retrieves the entity type from the given home assistant entity id (format <entity_type>.<entity_id>)

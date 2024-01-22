@@ -56,10 +56,11 @@ public class HomeAssistantWebSocketClient extends WebsocketIOClient<String> {
 
     private void tryHandleEntityStateChange(String message) {
         try {
+            LOG.info("Received entity state change message: " + message);
             var event = ValueUtil.parse(message, HomeAssistantEntityState.class);
             event.ifPresent(homeAssistantEntityState -> protocol.entityProcessor.handleEntityStateEvent(homeAssistantEntityState.getEvent()));
         } catch (Exception e) {
-            // ignore - not an entity state change event
+            LOG.warning("Failed to parse entity state change message: " + message);
         }
     }
 
